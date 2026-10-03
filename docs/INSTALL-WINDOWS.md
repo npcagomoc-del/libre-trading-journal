@@ -2,6 +2,8 @@
 
 Libre is based on [Trading-Journal-AI](https://github.com/simonro/Trading-Journal-AI) by Simon / simonro / Tape to Edge, under the original MIT license. This source preview runs on your own PC. Core journaling is free; optional API providers may charge for usage.
 
+**Want an AI assistant to handle setup?** Use the [ready-to-copy installation prompt](AI-INSTALL.md#copy-this-installation-prompt) in an assistant with terminal/file access on this PC. The manual steps below are also available if the assistant cannot run local commands.
+
 ## 1. Download the source
 
 Open [Libre on GitHub](https://github.com/npcagomoc-del/libre-trading-journal) and choose **Code → Download ZIP**, or [download main.zip directly](https://github.com/npcagomoc-del/libre-trading-journal/archive/refs/heads/main.zip).

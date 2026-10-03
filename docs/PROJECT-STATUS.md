@@ -24,6 +24,7 @@
 | MT5 local additions | Python terminal and local MCP transports, per-journal-account identity checks, encrypted MCP key, clock-aware chart data for forex/gold/supported crypto; mocked tests pass. |
 | UI local additions | Libre Trading Journal header/title, existing Happy Bull mascot, provider/backup controls, Brain status and original simonro credit in Settings. Isolated browser design/workflow check; no mobile browser walkthrough or claim of release approval. |
 | Documentation | Workspace entry points, app AI instructions, user/developer/data/troubleshooting guides, decisions and evidenced change history. |
+| AI-assisted installation | [Copyable installation and startup-repair prompts](AI-INSTALL.md) for an assistant with local terminal/file access on the target PC. Reviewed against setup/guides; execution across assistants and a second physical PC remain untested. |
 
 ## Verification performed in this feature pass
 
@@ -37,12 +38,12 @@
 | Clean publication frontend install/checks | `npm.cmd ci --no-audit --no-fund` installed 1,381 packages into the separate publication checkout. `CI=true`, `npm.cmd test -- --watchAll=false --runInBand`: **6 suites / 41 tests passed**; `npm.cmd run build`: **compiled successfully**. Existing CRA-related dependency deprecations and Node `fs.F_OK` notice were non-fatal. |
 | Runtime versions | Existing virtualenv Python **3.12.10**; bundled Node **24.19.0**. |
 | Standard npm command | `npm.cmd` absent from this Codex shell's PATH; publication checks used the installed `C:\Program Files\nodejs\npm.cmd` (npm 11.17.0, Node 24.19.0). The user's destination PC still needs Node/npm installed and on PATH. |
-| Publication scans/package | Allowlisted 129 source files, including 119 text files; the only custom token-pattern match was the explicitly synthetic test fixture. Gitleaks reported no leaks in the publication history. Source ZIP contents matched the allowlist exactly; no databases, credentials or uploaded journal files are included. |
+| Initial publication scans/package | Allowlisted 129 source files, including 119 text files; the only custom token-pattern match was the explicitly synthetic test fixture. Gitleaks reported no leaks in the publication history. Source ZIP contents matched the allowlist exactly; no databases, credentials or uploaded journal files are included. Later documentation adds the AI installation guide. |
 | Hosted source CI | Public `main` at `0765a3e`: Windows backend, Linux backend, and frontend build/tests all passed. See [the completed CI run](https://github.com/npcagomoc-del/libre-trading-journal/actions/runs/37143035396). Subsequent documentation-only revisions do not establish new live provider/device coverage. |
 | Source and history review | Read launch/setup scripts, requirements/package/CI, routes/schema/parsers, UI, existing docs, Git log and working-tree changes. |
 | Browser/temporary runtime | Production UI at 3020 pointed only to disposable backend 8020; synthetic account/trade/diary/attachment, isolated credential/recovery paths and disabled .env loading. Checked provider selection, backup preview/restore/recovery and Brain setup navigation. Existing real servers/data were untouched. |
 | Backup download | UI showed download initiation; synthetic API export returned a valid ZIP with zero missing attachments. Browser automation did not return the Blob-download path, so API output was used for the file-picker restore check. |
-| Documentation checks | Publication review covers 15 Markdown files, checking local file links and heading anchors, shell-specific setup/update commands, upstream attribution and source-preview limits. `git diff --check` passed; CRLF normalization warnings only. |
+| Documentation checks | AI-installation update covers **16 Markdown files / 121 local file links / 23 heading anchors**, all resolving. Publication review also covers shell-specific setup/update commands, upstream attribution and source-preview limits. `git diff --check` passed; CRLF normalization warnings only. |
 
 No second physical PC installation, live ChatGPT/API login/inference, real MT5/Alpaca connection, real trade import or restore into the user's journal was performed. Tests use synthetic data and mocked external services. Provider transport tests cover request formats/images and error handling; actual API-key model access remains to be verified by the user in Settings. A passing build is not proof of external account access. Fresh backend tests emitted a non-failing Starlette TestClient/httpx deprecation warning.
 

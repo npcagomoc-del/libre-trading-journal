@@ -2,6 +2,12 @@
 
 This file separates upstream commits from the local working tree. Dates below describe visible Git history or this documentation checkpoint. Earlier chat history was not available to the author and is not reconstructed.
 
+## 2026-10-04 — AI-assisted installation prompts
+
+- Added copy-and-paste prompts for an AI coding assistant to install/start Libre and diagnose startup errors on the user's own PC.
+- Covered missing prerequisites, shell-specific commands, durable server sessions, health/browser evidence, existing-journal preservation and necessary human installer actions. Optional AI credentials and paid inference remain separate from installation.
+- Linked the prompts prominently from README and the Windows tutorial. Documentation-only change; prompts were checked against repository guides, not executed as a fresh installation on a second PC.
+
 ## 2026-10-04 — public documentation polish
 
 - Separated Windows PowerShell and macOS/Linux commands in README/CONTRIBUTING; documented the untested macOS scope and Windows-only MT5 integration.

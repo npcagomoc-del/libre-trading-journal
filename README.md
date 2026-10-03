@@ -4,6 +4,8 @@ Libre Trading Journal is based on [Trading-Journal-AI](https://github.com/simonr
 
 **Download on your PC:** [Download source ZIP](https://github.com/npcagomoc-del/libre-trading-journal/archive/refs/heads/main.zip), extract it, then follow the [Windows installation tutorial](docs/INSTALL-WINDOWS.md). Install Python 3.11+ and Node.js 24 with npm, run `setup.bat` once, then `launch.bat`. Open http://localhost:3010 on the PC running the app.
 
+**Prefer an AI to do the setup?** Copy the [AI installation prompt](docs/AI-INSTALL.md#copy-this-installation-prompt) into a coding assistant with terminal/file access on your PC. It covers prerequisites, setup, startup checks and errors. A [startup repair prompt](docs/AI-INSTALL.md#copy-this-prompt-if-the-app-will-not-open) is included too.
+
 Choose **More → Settings → AI provider** for ChatGPT sign-in, an OpenAI API key, a Claude API key, or an OpenRouter API key. Brain, diary analysis, insights, and reviews use the selected provider. API usage is billed by the provider; the core journal works without AI. See the [AI provider guide](docs/AI-PROVIDERS.md).
 
 Use **More → Settings → Backup & restore** to download a journal ZIP, check a backup, or restore it with a recovery copy created first. Backups include the database and diary attachments, excluding API keys, OAuth tokens, and .env files. See the [backup guide](docs/BACKUP-RESTORE.md).
@@ -15,6 +17,7 @@ The upstream overview and screenshots below remain useful, but may differ from t
 | I want to… | Guide |
 |---|---|
 | Download and install on a new Windows PC | [Windows installation](docs/INSTALL-WINDOWS.md) |
+| Ask an AI assistant to install or fix startup | [Copy-and-paste AI prompts](docs/AI-INSTALL.md) |
 | Open the app and learn the daily workflow | [User guide](docs/USER-GUIDE.md) |
 | Fix startup, import, AI or chart errors | [Troubleshooting and recovery](docs/TROUBLESHOOTING.md) |
 | Know what is completed, unverified or unfinished | [Project status](docs/PROJECT-STATUS.md) |
