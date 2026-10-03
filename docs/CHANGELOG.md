@@ -8,7 +8,8 @@ This file separates upstream commits from the local working tree. Dates below de
 - Added Windows download/setup tutorial, portable repository paths, Libre source/CI links, and Linux/Windows backend CI checks.
 - Added Pillow/pillow-heif to backend requirements and explicit `iex` to the Alpaca template. A synthetic HEIC-to-JPEG codec smoke check passed in a fresh Windows virtualenv.
 - Sanitized MT5 request-validation errors so malformed requests do not echo credential inputs. Four regression cases increased the full backend suite to **158 passing tests** after installing all requirements into a clean virtualenv.
-- Earlier frontend evidence remains **41 passing tests / 6 suites** and a successful production build. External AI/model access and real journal transfers are not certified by these checks.
+- Clean `npm ci` installation in the separate publication checkout also passed **41 tests / 6 suites** and the CI-mode production build. External AI/model access and real journal transfers are not certified by these checks.
+- Published the source preview on the user's `npcagomoc-del` GitHub account. Public repository/branch and MIT detection were verified; private vulnerability reporting is enabled. Gitleaks found no leaks in the publication history; the 129-file source ZIP matches its allowlist.
 
 ## 2026-10-04 — Libre AI choices and backup/restore (uncommitted)
 

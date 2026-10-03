@@ -16,7 +16,7 @@ Security fixes are generally applied to the latest released version and the curr
 
 If you discover a security vulnerability in Libre Trading Journal, please **do not open a public GitHub issue**.
 
-Use GitHub's **private vulnerability reporting** from this repository's Security section when enabled. If no private reporting option is available, obtain a private maintainer contact before sending reproduction details or secrets. Do not route Libre-specific reports to the upstream project's maintainers.
+Use [GitHub's private vulnerability reporting](https://github.com/npcagomoc-del/libre-trading-journal/security/advisories/new), enabled for this repository. If a fork has no private reporting option, obtain a private maintainer contact before sending reproduction details or secrets. Do not route Libre-specific reports to the upstream project's maintainers.
 
 Please include, when possible:
 

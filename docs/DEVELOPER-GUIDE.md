@@ -158,7 +158,7 @@ node node_modules/@craco/craco/dist/bin/craco.js build
 
 For startup in the same situation: set `$env:PORT='3010'`, then `node node_modules/@craco/craco/dist/bin/craco.js start`. This is not a dependency installation substitute; if the file is missing, restore npm and perform setup.
 
-At the 4 October feature checkpoint: **154 backend tests passed; 6 frontend suites / 41 tests passed; production build compiled successfully.** A Node `fs.F_OK` deprecation warning was printed during the successful build. Tests isolate journal, credential and recovery stores. See [status](PROJECT-STATUS.md) for browser evidence and external-service verification limits.
+At the 4 October source preview checkpoint: **158 backend tests passed in a fresh Windows virtualenv; 6 frontend suites / 41 tests passed after clean npm installation; production build compiled successfully.** Non-failing dependency/Node deprecation notices were printed. Tests isolate journal, credential and recovery stores. See [status](PROJECT-STATUS.md) for browser evidence and external-service verification limits.
 
 ## Extend or update safely
 
