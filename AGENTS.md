@@ -8,7 +8,7 @@
 4. `docs/TROUBLESHOOTING.md` for failures; `docs/USER-GUIDE.md` for current UI workflows.
 5. `docs/DECISIONS.md`, `docs/CHANGELOG.md`, `CONTRIBUTING.md`, `SECURITY.md` as relevant.
 
-These documents describe inspected code, not hidden conversation history. Verify current code and `git status --short` before acting. Preserve existing user changes; never reset, clean, stash, overwrite or commit unrelated work without authorization. The original development checkout is nested inside a separately versioned workspace; a fresh Libre clone has the app at its root. Check your Git root.
+Use these guides as project context. Check current code and `git status --short` before changing files. Preserve existing user changes; never reset, clean, stash, overwrite or commit unrelated work without authorization. The original development checkout is nested inside a separately versioned workspace; a fresh Libre Trading Journal clone has the app at its root. Check your Git root.
 
 ## Working rules
 
@@ -18,7 +18,7 @@ These documents describe inspected code, not hidden conversation history. Verify
 - Take a consistent backup before an authorized migration/data repair. SQLite uses WAL. Include diary uploads, and preserve the previous database when restoring. Follow `docs/DATA-GUIDE.md`.
 - AI is optional. Read docs/AI-PROVIDERS.md: ai_provider.py dispatches explicitly to ChatGPT plan OAuth, OpenAI API, Anthropic API, or OpenRouter. Preserve existing OAuth, localhost guards, request headers, completed-response checks and separate installation credential storage. Never automatically fall back to another provider/key or claim API usage is included in a ChatGPT subscription. Tests must isolate both provider and ChatGPT stores. Do not test live inference or sign-in unless it is in the user's requested scope.
 - Backup/restore requires docs/BACKUP-RESTORE.md. Archives contain journal data and uploads, never credentials or .env. Preserve validation, exclusive maintenance gating, pre-restore recovery copies and rollback. Test only disposable databases/uploads; never restore a test archive into the real journal. Use one backend process for this local app.
-- Product name is Libre Trading Journal. Credit Simon / simonro / Tape to Edge and link the original Trading-Journal-AI in release documentation and About/Settings; preserve the original MIT copyright and license. Publishing is a separate action from local development.
+- Always use the full product name **Libre Trading Journal** in documentation and user-facing text. Credit Simon / simonro / Tape to Edge and link the original Trading-Journal-AI in release documentation and About/Settings; preserve the original MIT copyright and license. Publishing is a separate action from local development.
 - MT5 integration reads account identity and candles; it must not place trades. Preserve account checks, localhost MCP restrictions, credential separation and explicit historical clock offsets. Do not replace missing market data with invented candles.
 - Keep the app bound to localhost. Do not add cloud services, telemetry, deployment, paid services or external communications as incidental changes.
 - Make narrow changes. Update the applicable guide and status checkpoint when behavior changes. Distinguish code inspection, automated tests and live end-to-end verification; do not call a feature verified just because its mocked tests pass.

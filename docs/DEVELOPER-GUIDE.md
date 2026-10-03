@@ -1,6 +1,6 @@
 # Developer guide
 
-Scope: the Libre source preview prepared on **2026-10-04**. Start with [project status](PROJECT-STATUS.md); follow [AGENTS.md](../AGENTS.md) when using an AI collaborator. Contribution procedures are in [CONTRIBUTING.md](../CONTRIBUTING.md).
+Scope: the Libre Trading Journal source preview prepared on **2026-10-04**. Start with [project status](PROJECT-STATUS.md); follow [AGENTS.md](../AGENTS.md) when using an AI collaborator. Contribution procedures are in [CONTRIBUTING.md](../CONTRIBUTING.md).
 
 ## Locate the correct repository
 
@@ -10,7 +10,7 @@ git rev-parse --show-toplevel
 git status --short
 ```
 
-All paths in this guide are relative to the **app repository root** unless stated otherwise. A fresh Libre clone is already that root. The original development workspace nests `Trading-Journal-AI` inside a separately versioned `Trading Journal App` folder; preserve both repositories when working there.
+All paths in this guide are relative to the **app repository root** unless stated otherwise. A fresh Libre Trading Journal clone is already that root. The original development workspace nests `Trading-Journal-AI` inside a separately versioned `Trading Journal App` folder; preserve both repositories when working there.
 
 ## Setup on Windows
 
@@ -162,11 +162,11 @@ At the 4 October source preview checkpoint: **158 backend tests passed in a fres
 
 ## Extend or update safely
 
-1. Read `git status`, compare the intended files, and preserve existing local changes. Libre has additional features beyond its upstream base; do not reset it to upstream as an update procedure.
+1. Read `git status`, compare the intended files, and preserve existing local changes. Libre Trading Journal has additional features beyond its upstream base; do not reset it to upstream as an update procedure.
 2. Back up consistent database + uploads before an authorized update or migration. Preserve `.env` separately and reconnect external services if moving Windows user/machine.
 3. Inspect upstream changes before merging them into this customized version. A blind `git pull` or ZIP overwrite can conflict with local feature work; do not use force/reset as an update procedure.
 4. Install requirements with the repo interpreter when needed; use `npm ci` for the committed lockfile. Review dependency/lock changes rather than automatically accepting a generated replacement.
 5. Test behavior with synthetic data and run the relevant full checks. Verify startup in a separate disposable database when changing initialization.
 6. Update the status, changelog, affected user/data instructions and evidence limits.
 
-For new broker importers, follow the registry/UI/test workflow in CONTRIBUTING, but account for the expanded asset fields and separate Exness position parser in this version. Do not force position rows into a fill parser. Schema/settings changes must deliberately update backup compatibility and tests. There is no scheduled backup, automated app update or production deployment configuration. Preserve Simon / simonro's MIT credit when preparing a Libre release; publication requires its own requested action.
+For new broker importers, follow the registry/UI/test workflow in CONTRIBUTING, but account for the expanded asset fields and separate Exness position parser in this version. Do not force position rows into a fill parser. Schema/settings changes must deliberately update backup compatibility and tests. There is no scheduled backup, automated app update or production deployment configuration. Preserve Simon / simonro's MIT credit when preparing a Libre Trading Journal release; publication requires its own requested action.

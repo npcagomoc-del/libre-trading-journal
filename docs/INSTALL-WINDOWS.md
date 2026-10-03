@@ -1,12 +1,12 @@
 # Install Libre Trading Journal on Windows
 
-Libre is based on [Trading-Journal-AI](https://github.com/simonro/Trading-Journal-AI) by Simon / simonro / Tape to Edge, under the original MIT license. This source preview runs on your own PC. Core journaling is free; optional API providers may charge for usage.
+Libre Trading Journal is based on [Trading-Journal-AI](https://github.com/simonro/Trading-Journal-AI) by Simon / simonro / Tape to Edge, under the original MIT license. This source preview runs on your own PC. Core journaling is free; optional API providers may charge for usage.
 
-**Want an AI assistant to handle setup?** Use the [ready-to-copy installation prompt](AI-INSTALL.md#copy-this-installation-prompt) in an assistant with terminal/file access on this PC. The manual steps below are also available if the assistant cannot run local commands.
+**Install with an AI assistant:** Paste the [installation prompt](AI-INSTALL.md#copy-this-installation-prompt) into an assistant with terminal and file access on this PC. You can also follow the manual steps below.
 
 ## 1. Download the source
 
-Open [Libre on GitHub](https://github.com/npcagomoc-del/libre-trading-journal) and choose **Code → Download ZIP**, or [download main.zip directly](https://github.com/npcagomoc-del/libre-trading-journal/archive/refs/heads/main.zip).
+Open [Libre Trading Journal on GitHub](https://github.com/npcagomoc-del/libre-trading-journal) and choose **Code → Download ZIP**, or [download main.zip directly](https://github.com/npcagomoc-del/libre-trading-journal/archive/refs/heads/main.zip).
 
 Right-click the ZIP → **Extract All**. Move the extracted `libre-trading-journal-main` folder somewhere convenient, for example `C:\Projects\libre-trading-journal`. Prefer a folder outside OneDrive or other sync services because the running app writes a local SQLite database.
 

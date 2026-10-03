@@ -1,6 +1,6 @@
 # Contributing to Libre Trading Journal
 
-Libre builds on [Trading-Journal-AI](https://github.com/simonro/Trading-Journal-AI) by Simon / simonro / Tape to Edge. Preserve the original MIT credit. Start with [developer setup](docs/DEVELOPER-GUIDE.md) and [AGENTS.md](AGENTS.md) for this version.
+Libre Trading Journal builds on [Trading-Journal-AI](https://github.com/simonro/Trading-Journal-AI) by Simon / simonro / Tape to Edge. Preserve the original MIT credit. Start with [developer setup](docs/DEVELOPER-GUIDE.md) and [AGENTS.md](AGENTS.md) for this version.
 
 Thanks for helping. Bug reports, broker samples, fixes and features are all welcome. This page
 covers how to set up, what to test, and what a pull request needs before it can be merged.

@@ -1,10 +1,12 @@
 # Libre Trading Journal
 
-Libre Trading Journal is based on [Trading-Journal-AI](https://github.com/simonro/Trading-Journal-AI) by **Simon (simonro / Tape to Edge)**. Libre adds multi-provider AI, additional broker/asset integrations, and journal backup/restore. The original [MIT license and copyright](LICENSE) are retained. This is an early source preview for local, single-user use.
+Libre Trading Journal runs on your computer. Import trades, review results, write diary entries and back up your journal. Choose an AI provider when you want coaching.
+
+Built on [Trading-Journal-AI](https://github.com/simonro/Trading-Journal-AI) by **Simon (simonro / Tape to Edge)**, with the original [MIT license and copyright](LICENSE) retained. This early version is for local, single-user use.
 
 **Download on your PC:** [Download source ZIP](https://github.com/npcagomoc-del/libre-trading-journal/archive/refs/heads/main.zip), extract it, then follow the [Windows installation tutorial](docs/INSTALL-WINDOWS.md). Install Python 3.11+ and Node.js 24 with npm, run `setup.bat` once, then `launch.bat`. Open http://localhost:3010 on the PC running the app.
 
-**Prefer an AI to do the setup?** Copy the [AI installation prompt](docs/AI-INSTALL.md#copy-this-installation-prompt) into a coding assistant with terminal/file access on your PC. It covers prerequisites, setup, startup checks and errors. A [startup repair prompt](docs/AI-INSTALL.md#copy-this-prompt-if-the-app-will-not-open) is included too.
+**Install with an AI assistant:** Paste the [installation prompt](docs/AI-INSTALL.md#copy-this-installation-prompt) into a coding assistant with terminal and file access on your PC. Use the [startup repair prompt](docs/AI-INSTALL.md#copy-this-prompt-if-the-app-will-not-open) if the app will not open.
 
 Choose **More → Settings → AI provider** for ChatGPT sign-in, an OpenAI API key, a Claude API key, or an OpenRouter API key. Brain, diary analysis, insights, and reviews use the selected provider. API usage is billed by the provider; the core journal works without AI. See the [AI provider guide](docs/AI-PROVIDERS.md).
 
@@ -12,18 +14,18 @@ Use **More → Settings → Backup & restore** to download a journal ZIP, check 
 
 ## Start here
 
-The upstream overview and screenshots below remain useful, but may differ from the current Libre branding and features. See the dated [project status](docs/PROJECT-STATUS.md) for actual implementation and verification.
+The screenshots and video show Simon's original app. See [project status](docs/PROJECT-STATUS.md) for current features, test results and known issues.
 
 | I want to… | Guide |
 |---|---|
 | Download and install on a new Windows PC | [Windows installation](docs/INSTALL-WINDOWS.md) |
-| Ask an AI assistant to install or fix startup | [Copy-and-paste AI prompts](docs/AI-INSTALL.md) |
+| Ask an AI assistant to install or fix startup | [Installation and repair prompts](docs/AI-INSTALL.md) |
 | Open the app and learn the daily workflow | [User guide](docs/USER-GUIDE.md) |
 | Fix startup, import, AI or chart errors | [Troubleshooting and recovery](docs/TROUBLESHOOTING.md) |
 | Know what is completed, unverified or unfinished | [Project status](docs/PROJECT-STATUS.md) |
 | Set up, understand or maintain the code | [Developer guide](docs/DEVELOPER-GUIDE.md) |
 | Understand data, calculations or backup/restore | [Data guide](docs/DATA-GUIDE.md) |
-| Understand design choices and evidenced changes | [Decisions](docs/DECISIONS.md) · [Changelog](docs/CHANGELOG.md) |
+| Read design decisions and change history | [Decisions](docs/DECISIONS.md) · [Changelog](docs/CHANGELOG.md) |
 | Ask a future AI to continue safely | [AI instructions and reading order](AGENTS.md) |
 
 For ordinary use, run `launch.bat` **from this app folder**, keep both server windows open, and open [http://localhost:3010](http://localhost:3010). First-time setup is below. If startup fails, begin with the troubleshooting guide; do not delete the database. Review local changes and back up before updating.
@@ -34,7 +36,7 @@ Choose **Exness / MT5 (Forex & Gold)** on Import and download its template/examp
 
 Follow the [Exness import tutorial](docs/USER-GUIDE.md#3-import-exness--mt5-forex-and-gold-history) for the workflow and [position-format reference](docs/DATA-GUIDE.md#exness-position-format) for sizing, currencies and repeat/corrected imports. The generic template uses one row per fill instead.
 
-The walkthrough and screenshots below are from the **upstream project**. Libre's CI checks are linked here; a passing build does not establish live AI-provider access.
+The walkthrough and screenshots are from the **original project**. The badge below links to automated checks for Libre Trading Journal.
 
 [![CI](https://github.com/npcagomoc-del/libre-trading-journal/actions/workflows/ci.yml/badge.svg)](https://github.com/npcagomoc-del/libre-trading-journal/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
@@ -45,13 +47,12 @@ MFE/MAE, exit efficiency), and, if you want it to, uses your selected AI provide
 your days on process.
 
 - **Your journal is stored on your computer.** One SQLite file, no telemetry. Optional coaching sends relevant context to the selected AI service.
-- **The numbers are not AI.** Trade grouping, P&L, fees and statistics are plain code with tests.
-  AI is an optional coaching layer on top.
+- **Calculations use code.** Trade grouping, P&L, fees and statistics are calculated by tested code. AI is optional and reviews your trades and diary entries.
 - **Stocks, options, futures, crypto, forex and gold**, with partial fills, scale-ins and shorts grouped automatically.
 - **Thinkorswim, Interactive Brokers and Exness** importers, plus a generic fill template for other broker exports.
 - **Free and MIT licensed.** No paid tier.
 
-**[Quick start](#quick-start)** · **[Original creator's walkthrough](https://www.youtube.com/watch?v=LTR4HOfS_hc)** · **[Libre source](https://github.com/npcagomoc-del/libre-trading-journal)** · **[Privacy](#privacy-and-your-data)**
+**[Quick start](#quick-start)** · **[Original creator's walkthrough](https://www.youtube.com/watch?v=LTR4HOfS_hc)** · **[Libre Trading Journal source](https://github.com/npcagomoc-del/libre-trading-journal)** · **[Privacy](#privacy-and-your-data)**
 
 **What this is not:** Not financial advice. Not a signal service. Every screenshot below is the
 synthetic demo seed, not anyone's real trades.
@@ -60,7 +61,7 @@ synthetic demo seed, not anyone's real trades.
 
 ## Privacy and your data
 
-Libre Trading Journal is designed as a **local-first application**.
+Libre Trading Journal stores your journal **on your computer**.
 
 Your trading journal database, imported broker data, notes, and uploaded files are stored locally on your computer. Libre Trading Journal does not require a service login for core journaling and does not include telemetry or analytics that send your usage data back to the project. The backend listens on `localhost` only. If you place the app in OneDrive or another synced folder, your operating system's sync settings can copy local journal files; see the data guide before treating it as a shared database.
 
@@ -165,7 +166,7 @@ or delete one and reassign its trades.
 
 [![Watch: I built my own AI trading journal and stopped paying monthly](docs/video-thumbnail.png)](https://www.youtube.com/watch?v=LTR4HOfS_hc)
 
-Simon's walkthrough covers the original app, installation and customization prompts. Libre's AI provider and backup controls are covered in the guides above.
+Simon's walkthrough covers the original app, installation and customization prompts. Libre Trading Journal's AI provider and backup controls are covered in the guides above.
 
 ## Quick start
 
@@ -245,7 +246,7 @@ If `git status` lists changes or `git pull --ff-only` refuses, preserve the file
 
 If the app cannot start, the [advanced offline backup/recovery guide](docs/DATA-GUIDE.md#backup-a-consistent-journal) explains consistent SQLite snapshots and uploads. Do not copy an active database without its committed WAL data.
 
-To check what changed, see the [changelog](docs/CHANGELOG.md) and [Libre commit history](https://github.com/npcagomoc-del/libre-trading-journal/commits/main/).
+To check what changed, see the [changelog](docs/CHANGELOG.md) and [Libre Trading Journal commit history](https://github.com/npcagomoc-del/libre-trading-journal/commits/main/).
 
 ## Importing from a broker that is not listed
 
@@ -301,7 +302,7 @@ Official integration reference: [Sign in with ChatGPT for open-source apps](http
 
 ## Customize with an AI coding assistant
 
-The original Trading-Journal-AI app was built by Simon with Claude Code, one session at a time. The Libre modifications build on that foundation. The upstream customization approach remains useful; the actual AI instructions for this repository are in [AGENTS.md](AGENTS.md).
+Simon built the original Trading-Journal-AI app with Claude Code. To work on Libre Trading Journal with a coding assistant, start with [AGENTS.md](AGENTS.md).
 
 You can use an AI coding assistant to adapt the app. Start it with [AGENTS.md](AGENTS.md) so it knows the code map, data safeguards and checks. A sample prompt:
 
@@ -321,7 +322,7 @@ privately, as described in [SECURITY.md](SECURITY.md), not in a public issue.
 
 Simon's links: [YouTube @tapetoedge](https://www.youtube.com/@tapetoedge), [X @tapetoedge](https://x.com/tapetoedge), and [Tape to Edge newsletter](https://tape-to-edge.beehiiv.com).
 
-Libre is maintained in [npcagomoc-del/libre-trading-journal](https://github.com/npcagomoc-del/libre-trading-journal). Report Libre issues here; the original project remains [simonro/Trading-Journal-AI](https://github.com/simonro/Trading-Journal-AI).
+Libre Trading Journal is maintained in [npcagomoc-del/libre-trading-journal](https://github.com/npcagomoc-del/libre-trading-journal). Report Libre Trading Journal issues here; the original project remains [simonro/Trading-Journal-AI](https://github.com/simonro/Trading-Journal-AI).
 
 Educational software, not financial advice.
 

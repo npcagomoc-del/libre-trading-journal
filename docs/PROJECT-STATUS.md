@@ -1,15 +1,15 @@
 # Project status and handoff
 
-**Checkpoint: 4 October 2026, Asia/Manila — initial Libre source preview.** “Implemented” means present in code; external account/terminal verification is called out separately. Earlier local checkpoints remain recorded in CHANGELOG.
+**Checkpoint: 4 October 2026, Asia/Manila — initial Libre Trading Journal source preview.** “Implemented” means present in code; external account/terminal verification is called out separately. Earlier local checkpoints remain recorded in CHANGELOG.
 
 ## Repository and current state
 
 - Public source repository: [npcagomoc-del/libre-trading-journal](https://github.com/npcagomoc-del/libre-trading-journal). The app is at the root of a fresh clone. [Windows installation](INSTALL-WINDOWS.md) covers downloading and running it on another PC.
 - Original development app: `Trading-Journal-AI/`, inside the separately versioned `Trading Journal App` workspace. The upstream base is `631c574` — `Bump the frontend group in /frontend with 6 updates (#10)` (2026-09-18).
 - Source publication is prepared in a separate checkout, preserving the original working tree and upstream history. It excludes runtime databases, uploads, credentials, generated dependencies, outputs, and unreviewed design drafts. Run `git status --short` for the current state of your own checkout.
-- Initial source commit `8db2b70` was pushed to the public Libre `main` branch. GitHub identifies the repository as public and MIT licensed. Private vulnerability reporting is enabled. Hosted CI is checked separately from local results.
+- Initial source commit `8db2b70` was pushed to the public Libre Trading Journal `main` branch. GitHub identifies the repository as public and MIT licensed. Private vulnerability reporting is enabled. Hosted CI is checked separately from local results.
 - Existing upstream docs/screenshots remain. Screenshots show the upstream synthetic demo and can differ from the current local branding/features.
-- This feature pass adds Libre branding, AI selection and built-in backup/restore, with guides and future-AI instructions updated. Real journal data, existing credentials and Git history were preserved. Three Astra agents handled provider backend, backup backend and UI/design; parent integrated and checked the result.
+- This feature pass adds Libre Trading Journal branding, AI selection and built-in backup/restore, with guides and future-AI instructions updated. Real journal data, existing credentials and Git history were preserved. Three Astra agents handled provider backend, backup backend and UI/design; parent integrated and checked the result.
 
 ## Implemented capabilities
 

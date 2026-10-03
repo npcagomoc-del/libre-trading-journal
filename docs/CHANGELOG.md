@@ -1,10 +1,16 @@
-# Evidenced change history
+# Changelog
 
-This file separates upstream commits from the local working tree. Dates below describe visible Git history or this documentation checkpoint. Earlier chat history was not available to the author and is not reconstructed.
+Changes below are recorded from Git history, source review and test results. The earlier local-development entries describe the work before publication.
+
+## 2026-10-04 — product name and documentation wording
+
+- Replaced shortened product names with Libre Trading Journal throughout the public documentation.
+- Rewrote the installation/repair prompts and simplified README wording. Added the full-name convention to AGENTS.md.
+- Documentation-only change. Checked links, heading anchors and whitespace; no application behavior changed.
 
 ## 2026-10-04 — AI-assisted installation prompts
 
-- Added copy-and-paste prompts for an AI coding assistant to install/start Libre and diagnose startup errors on the user's own PC.
+- Added copy-and-paste prompts for an AI coding assistant to install/start Libre Trading Journal and diagnose startup errors on the user's own PC.
 - Covered missing prerequisites, shell-specific commands, durable server sessions, health/browser evidence, existing-journal preservation and necessary human installer actions. Optional AI credentials and paid inference remain separate from installation.
 - Linked the prompts prominently from README and the Windows tutorial. Documentation-only change; prompts were checked against repository guides, not executed as a fresh installation on a second PC.
 
@@ -12,25 +18,25 @@ This file separates upstream commits from the local working tree. Dates below de
 
 - Separated Windows PowerShell and macOS/Linux commands in README/CONTRIBUTING; documented the untested macOS scope and Windows-only MT5 integration.
 - Updated safe Git/ZIP update instructions to use the app interpreter, committed frontend lockfile, and built-in backup/restore.
-- Shortened the introductory Exness section, clarified current Settings controls, and replaced inherited first-person creator/affiliate wording with explicit Simon attribution and Libre maintainer links.
+- Shortened the introductory Exness section, clarified current Settings controls, and replaced inherited first-person creator/affiliate wording with explicit Simon attribution and Libre Trading Journal maintainer links.
 - Made AI contributor commands portable, linked the importer prompt to AGENTS/data safeguards, and removed checkout-specific wording from generic setup/data guidance.
 - No application behavior changed. Hosted CI for source commit `0765a3e` passed Windows/Linux backend and frontend checks. Documentation is validated with local link/anchor and whitespace checks rather than rerunning application tests locally.
 
-## 2026-10-04 — initial Libre source preview
+## 2026-10-04 — initial Libre Trading Journal source preview
 
 - Prepared source for `npcagomoc-del/libre-trading-journal` in a separate checkout, retaining upstream history and the original Tape to Edge MIT copyright. Runtime journal data, uploaded files, credentials and unreviewed design drafts are excluded.
-- Added Windows download/setup tutorial, portable repository paths, Libre source/CI links, and Linux/Windows backend CI checks.
+- Added Windows download/setup tutorial, portable repository paths, Libre Trading Journal source/CI links, and Linux/Windows backend CI checks.
 - Added Pillow/pillow-heif to backend requirements and explicit `iex` to the Alpaca template. A synthetic HEIC-to-JPEG codec smoke check passed in a fresh Windows virtualenv.
 - Sanitized MT5 request-validation errors so malformed requests do not echo credential inputs. Four regression cases increased the full backend suite to **158 passing tests** after installing all requirements into a clean virtualenv.
 - Clean `npm ci` installation in the separate publication checkout also passed **41 tests / 6 suites** and the CI-mode production build. External AI/model access and real journal transfers are not certified by these checks.
 - Published the source preview on the user's `npcagomoc-del` GitHub account. Public repository/branch and MIT detection were verified; private vulnerability reporting is enabled. Gitleaks found no leaks in the publication history; the 129-file source ZIP matches its allowlist.
 
-## 2026-10-04 — Libre AI choices and backup/restore (uncommitted)
+## 2026-10-04 — Libre Trading Journal AI choices and backup/restore (uncommitted)
 
 - Added explicit ChatGPT sign-in, OpenAI API key, direct Claude API key and OpenRouter API key choices, shared across Brain/diary/insights/reviews. Existing ChatGPT OAuth and connection storage retained.
 - Added protected installation key storage, masked/cleared key forms, model discovery/manual IDs, explicit billed connection test and sanitized errors; no automatic provider fallback. Image conversion/capability handling covered by transport tests.
 - Added consistent SQLite + attachment ZIP exports, inspection/count preview, exact RESTORE confirmation, automatic recovery copies/downloads, rollback and request coordination. Validation rejects unsafe/incompatible archives and excludes service credentials. Missing incoming/current recovery attachments block restore.
-- Added Libre name in header/public metadata/API title, Brain provider status and original Simon / simonro attribution in Settings/README; original MIT license retained.
+- Added Libre Trading Journal name in header/public metadata/API title, Brain provider status and original Simon / simonro attribution in Settings/README; original MIT license retained.
 - Added provider/backup tutorials and updated user, developer, data, troubleshooting, status and AI handoff instructions.
 - Checks: **154 backend tests**, **41 frontend tests / 6 suites**, successful CI production build. Isolated browser check used synthetic data and separate credentials/recovery paths; no real restore or live paid inference. See PROJECT-STATUS for exact evidence limits.
 - Three user-requested Astra agents assisted with backend and UI/design. No commit, push or publication performed.

@@ -1,6 +1,6 @@
 # Code of Conduct
 
-Trading Journal AI is a small project built in the open. Everyone who takes part, in issues, pull
+Libre Trading Journal is an open-source project. Everyone who takes part, in issues, pull
 requests, discussions or anywhere else the project is represented, is expected to keep it a place
 where people can ask questions and disagree without being attacked.
 
@@ -22,6 +22,6 @@ where people can ask questions and disagree without being attacked.
 ## Enforcement
 
 The maintainer may edit or remove comments, close issues and pull requests, and block people who
-break these rules. Report concerns to the Libre repository maintainer through an available private contact channel. Security vulnerabilities follow [SECURITY.md](SECURITY.md). Do not send reports about Libre changes to the original upstream creator.
+break these rules. Report concerns to the Libre Trading Journal repository maintainer through an available private contact channel. Security vulnerabilities follow [SECURITY.md](SECURITY.md). Do not send reports about Libre Trading Journal changes to the original upstream creator.
 
 This code is adapted from the ideas in the [Contributor Covenant](https://www.contributor-covenant.org/).

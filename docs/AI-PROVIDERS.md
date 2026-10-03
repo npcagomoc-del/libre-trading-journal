@@ -1,6 +1,6 @@
 # Choose an AI provider
 
-Libre Trading Journal supports four explicit choices. The selected provider is shared by Brain, diary analysis, performance insights, and daily/weekly reviews. The journal, imports, deterministic calculations, and ordinary reports work without AI.
+Choose ChatGPT sign-in, OpenAI API, Claude API or OpenRouter in Libre Trading Journal. Brain, diary analysis, insights and reviews use the provider selected in Settings. Imports, calculations and ordinary reports work without AI.
 
 ## Set up your connection
 
