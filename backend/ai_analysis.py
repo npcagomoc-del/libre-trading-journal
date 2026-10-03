@@ -1,4 +1,4 @@
-import anthropic
+from ai_provider import generate_text
 import base64
 import json
 import os
@@ -8,7 +8,6 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-MODEL = "claude-opus-5"
 
 DIARY_SYSTEM_PROMPT = """You are an expert trading coach analyzing a trader's handwritten or typed diary entry.
 
@@ -146,50 +145,14 @@ def normalize_strategy(raw):
     return t
 
 
-def get_client() -> anthropic.Anthropic:
-    api_key = os.getenv("ANTHROPIC_API_KEY")
-    if not api_key or api_key == "your_anthropic_api_key_here":
-        raise ValueError("ANTHROPIC_API_KEY is not set in .env file")
-    return anthropic.Anthropic(api_key=api_key)
-
-
-
 def response_text(response) -> str:
-    """Concatenate the text blocks of a Messages API response.
-
-    `response.content` is a list of blocks and the FIRST one is not necessarily
-    text. On Claude Opus 5 adaptive thinking is on by default, so content[0] is
-    typically a ThinkingBlock — indexing it raises
-    "'ThinkingBlock' object has no attribute 'text'". Always select by .type.
-    """
-    parts = [b.text for b in response.content if getattr(b, "type", None) == "text"]
-    return "".join(parts).strip()
-
-
-# The per-trade JSON grows with the number of diary lines, and on Opus 5 adaptive
-# thinking spends from the SAME max_tokens budget, so a tight cap truncates the
-# JSON mid-string and json.loads() reports a meaningless column number instead of
-# the real problem. Sized for a full day of trades plus thinking.
-DIARY_MAX_TOKENS = 16000
-
-
-def raise_if_truncated(response, what: str = "analysis") -> None:
-    """Fail loudly when the model hit the token ceiling.
-
-    Without this the caller parses a half-written JSON string and surfaces
-    "Unterminated string starting at: line N column M", which points at the
-    output rather than the cause.
-    """
-    if getattr(response, "stop_reason", None) == "max_tokens":
-        raise ValueError(
-            f"The {what} response hit the {DIARY_MAX_TOKENS}-token limit and was cut off. "
-            "Split the diary into fewer trades per run, or raise DIARY_MAX_TOKENS."
-        )
+    """The shared ChatGPT transport returns only fully completed response text."""
+    return response.strip()
 
 
 def analyze_diary_entry(image_path: str, entry_date: str, trades_context: list[dict]) -> dict:
     """
-    Send diary screenshot + trades context to Claude for analysis.
+    Send diary screenshot + trades context to ChatGPT for analysis.
 
     Args:
         image_path: absolute path to the uploaded image
@@ -201,7 +164,6 @@ def analyze_diary_entry(image_path: str, entry_date: str, trades_context: list[d
         Parsed dict with diary_date, overall_summary, patterns_identified,
         improvement_areas, trade_analyses
     """
-    client = get_client()
 
     # Read and encode image
     image_bytes = Path(image_path).read_bytes()
@@ -245,9 +207,7 @@ Please analyze this trading diary screenshot. For each trade you find mentioned:
 
 Return only the JSON object."""
 
-    response = client.messages.create(
-        model=MODEL,
-        max_tokens=DIARY_MAX_TOKENS,
+    response = generate_text(
         system=DIARY_SYSTEM_PROMPT,
         messages=[
             {
@@ -270,13 +230,11 @@ Return only the JSON object."""
         ],
     )
 
-    raise_if_truncated(response, "diary photo analysis")
     return _parse_response(response_text(response), entry_date)
 
 
 def analyze_diary_text(text_content: str, entry_date: str, trades_context: list[dict]) -> dict:
-    """Analyze typed/CSV diary notes (no image) using Claude text API."""
-    client = get_client()
+    """Analyze typed/CSV diary notes (no image) using ChatGPT."""
 
     context_lines = []
     for t in trades_context:
@@ -290,9 +248,7 @@ def analyze_diary_text(text_content: str, entry_date: str, trades_context: list[
         context_lines.append(line)
     trades_context_str = '\n'.join(context_lines) if context_lines else "No trades found for this date."
 
-    response = client.messages.create(
-        model=MODEL,
-        max_tokens=DIARY_MAX_TOKENS,
+    response = generate_text(
         system=DIARY_SYSTEM_PROMPT,
         messages=[{
             "role": "user",
@@ -309,7 +265,6 @@ For each "Source: X" note create a tag with type "source". Return only the JSON 
         }],
     )
 
-    raise_if_truncated(response, "diary analysis")
     raw = response_text(response)
     if raw.startswith('```'):
         raw = re.sub(r'^```(?:json)?\n?', '', raw)
@@ -339,7 +294,7 @@ def _parse_response(raw_text: str, entry_date: str) -> dict:
 
 def save_analysis_to_db(conn, diary_entry_id: int, analysis: dict):
     """
-    Persist trade_analysis rows and trade_tags from Claude's response.
+    Persist trade_analysis rows and trade_tags from ChatGPT's response.
     Uses INSERT OR REPLACE so re-uploading a diary updates existing analysis.
     """
     for ta in analysis.get('trade_analyses', []):
@@ -414,7 +369,7 @@ def save_analysis_to_db(conn, diary_entry_id: int, analysis: dict):
 def build_trades_context(conn, entry_date: str, account_id: int) -> list[dict]:
     """
     Fetch all trades for a given date and account, compute avg entry/exit prices
-    from executions JSON for Claude's context.
+    from executions JSON for ChatGPT's context.
     """
     cursor = conn.execute(
         "SELECT * FROM trades WHERE date = ? AND account_id = ?",
@@ -492,13 +447,10 @@ def generate_insights(trades_summary: dict) -> str:
     Generate AI coaching insights from aggregated performance data.
     Returns markdown-formatted text.
     """
-    client = get_client()
 
     summary_text = json.dumps(trades_summary, indent=2)
 
-    response = client.messages.create(
-        model=MODEL,
-        max_tokens=2048,
+    response = generate_text(
         messages=[
             {
                 "role": "user",
@@ -652,8 +604,7 @@ Required JSON schema:
 
 
 def generate_weekly_summary(week_context: dict) -> dict:
-    """Call Claude to generate a weekly behavioral synthesis."""
-    client = get_client()
+    """Call ChatGPT to generate a weekly behavioral synthesis."""
 
     trades = week_context["trades"]
     week_label = week_context["week_label"]
@@ -699,9 +650,7 @@ def generate_weekly_summary(week_context: dict) -> dict:
         + "\n\nGenerate the weekly behavioral synthesis JSON."
     )
 
-    response = client.messages.create(
-        model=MODEL,
-        max_tokens=2048,
+    response = generate_text(
         system=WEEKLY_SUMMARY_PROMPT,
         messages=[{"role": "user", "content": user_content}],
     )
@@ -718,10 +667,9 @@ def generate_weekly_summary(week_context: dict) -> dict:
 
 
 def generate_brain_response(messages: list[dict], context: str) -> str:
-    """Send full conversation history + trade context to Claude Brain."""
-    client = get_client()
+    """Send full conversation history + trade context to ChatGPT Brain."""
 
-    claude_messages = []
+    chat_messages = []
     context_injected = False
     for msg in messages:
         role = msg.get('role', 'user')
@@ -729,12 +677,10 @@ def generate_brain_response(messages: list[dict], context: str) -> str:
         if role == 'user' and not context_injected:
             content = f"[Trading data]\n{context}\n\n[Question]\n{content}"
             context_injected = True
-        claude_messages.append({"role": role, "content": content})
+        chat_messages.append({"role": role, "content": content})
 
-    response = client.messages.create(
-        model=MODEL,
-        max_tokens=2048,
+    response = generate_text(
         system=BRAIN_SYSTEM_PROMPT,
-        messages=claude_messages,
+        messages=chat_messages,
     )
     return response_text(response)

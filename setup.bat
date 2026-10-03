@@ -1,9 +1,9 @@
 @echo off
 setlocal
-title Trading Journal AI Setup
+title Libre Trading Journal Setup
 cd /d "%~dp0"
 
-echo Trading Journal AI setup
+echo Libre Trading Journal setup
 echo.
 
 where python >nul 2>nul
@@ -50,12 +50,12 @@ if errorlevel 1 (
 )
 popd
 
-echo [4/4] Creating backend\.env for your optional API keys
+echo [4/4] Creating backend\.env for optional market data
 if exist "backend\.env" (
     echo       backend\.env already exists, left as it is
 ) else (
     copy ".env.example" "backend\.env" >nul
-    echo       Created. Add keys later if you want the AI features or trade charts; the journal works without them.
+    echo       Created. Optional market data keys go here. Choose your AI provider in Settings; the journal works without AI.
 )
 
 echo.

@@ -1,9 +1,9 @@
 {
-  "short_name": "Trading Journal AI",
-  "name": "Trading Journal AI",
-  "icons": [],
+  "short_name": "Libre Journal",
+  "name": "Libre Trading Journal",
+  "icons": [{"src":"happy-bull.png","sizes":"1280x1280","type":"image/png","purpose":"any"}],
   "start_url": ".",
   "display": "standalone",
-  "theme_color": "#000000",
-  "background_color": "#ffffff"
+  "theme_color": "#0B1016",
+  "background_color": "#0A0E12"
 }

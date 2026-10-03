@@ -143,10 +143,10 @@ export default function App() {
         )}
         {page === 'reports' && <Reports accountId={selectedAccountId} />}
         {page === 'help' && <Help />}
-        {page === 'settings' && <Settings />}
+        {page === 'settings' && <Settings accounts={accounts} accountId={selectedAccountId} />}
       </main>
 
-      <Brain accountId={selectedAccountId} open={brainOpen} onOpenChange={setBrainOpen} />
+      <Brain accountId={selectedAccountId} open={brainOpen} onOpenChange={setBrainOpen} onNavigate={navigate} />
 
       {showAddTrade && (
         <AddTradeModal

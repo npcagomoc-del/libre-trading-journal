@@ -2,6 +2,9 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Plus, Pencil, GitMerge, Trash2, Search } from 'lucide-react';
 import { libraryApi } from '../api';
 import { PageHeader } from './ui';
+import AIProviderSettings from './AIProviderSettings';
+import BackupRestore from './BackupRestore';
+import MarketDataConnection from './MarketDataConnection';
 
 const SECTIONS = [
   { id: 'strategy', label: 'Strategies' },
@@ -270,7 +273,7 @@ function ItemList({ kind, tagType = '', title, sub, noun, items, onChanged }) {
   );
 }
 
-export default function Settings() {
+export default function Settings({ accounts = [], accountId = null }) {
   const [lib, setLib] = useState(null);
   const [loadError, setLoadError] = useState(null);
   const [section, setSection] = useState('strategy');
@@ -297,9 +300,12 @@ export default function Settings() {
     <div>
       <PageHeader
         title="Settings"
-        subtitle="Clean up the names the journal uses. Renames and merges update every trade that uses the name."
+        subtitle="Connect your tools, protect your journal, and organize your trading vocabulary."
       />
 
+      <AIProviderSettings />
+      <MarketDataConnection accounts={accounts} accountId={accountId} />
+      <BackupRestore />
       <div className="tabs" role="tablist" aria-label="Settings sections" style={{ marginBottom: 'var(--space-5)' }}>
         {SECTIONS.map(s => (
           <button
@@ -352,6 +358,7 @@ export default function Settings() {
           </div>
         )}
       </div>
+      <footer className="journal-about"><strong>Libre Trading Journal</strong><br />Built on <a href="https://github.com/simonro/Trading-Journal-AI" target="_blank" rel="noreferrer">Trading Journal AI / Tape to Edge</a> by simonro. Open source under the MIT license.</footer>
     </div>
   );
 }

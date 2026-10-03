@@ -14,6 +14,9 @@ export default function AddTradeModal({ accounts, defaultAccountId, onClose, onS
     entry_price: '',
     exit_price: '',
     quantity: 1,
+    multiplier: 1,
+    quote_currency: 'USD',
+    quote_to_usd_rate: 1,
     commissions: 0,
     strategy: '',
     stop_loss: '',
@@ -29,10 +32,12 @@ export default function AddTradeModal({ accounts, defaultAccountId, onClose, onS
   const previewPnl = () => {
     const entry = parseFloat(form.entry_price);
     const exit = parseFloat(form.exit_price);
-    const qty = parseInt(form.quantity);
+    const qty = Number(form.quantity);
     const comm = parseFloat(form.commissions) || 0;
     if (!entry || !exit || !qty) return null;
-    const gross = form.side === 'LONG' ? (exit - entry) * qty : (entry - exit) * qty;
+    const factor = Number(form.multiplier) * Number(form.quote_to_usd_rate);
+    if (!(factor > 0)) return null;
+    const gross = (form.side === 'LONG' ? exit - entry : entry - exit) * qty * factor;
     return (gross - comm).toFixed(2);
   };
 
@@ -48,7 +53,10 @@ export default function AddTradeModal({ accounts, defaultAccountId, onClose, onS
       const payload = {
         ...form,
         ticker: form.ticker.toUpperCase(),
-        quantity: parseInt(form.quantity),
+        quantity: Number(form.quantity),
+        multiplier: Number(form.multiplier),
+        quote_currency: form.quote_currency.toUpperCase(),
+        quote_to_usd_rate: Number(form.quote_to_usd_rate),
         commissions: parseFloat(form.commissions) || 0,
         entry_price: parseFloat(form.entry_price),
         exit_price: form.exit_price ? parseFloat(form.exit_price) : null,
@@ -58,7 +66,7 @@ export default function AddTradeModal({ accounts, defaultAccountId, onClose, onS
       await tradesApi.create(payload);
       onSaved();
     } catch (err) {
-      setError(err.response?.data?.error || err.message);
+      setError(typeof err.response?.data?.detail === 'string' ? err.response.data.detail : err.response?.data?.error || err.message);
       setSaving(false);
     }
   };
@@ -86,7 +94,7 @@ export default function AddTradeModal({ accounts, defaultAccountId, onClose, onS
 
             <div>
               <label className="field-label" htmlFor="at-ticker">Ticker</label>
-              <input id="at-ticker" style={fieldStyle} placeholder="AAPL" value={form.ticker} onChange={e => update('ticker', e.target.value)} required />
+              <input id="at-ticker" style={fieldStyle} placeholder={form.instrument_type === 'CRYPTO' ? 'BTCUSD' : form.instrument_type === 'FOREX' ? 'EURUSD' : form.instrument_type === 'GOLD' ? 'XAUUSD' : 'AAPL'} value={form.ticker} onChange={e => update('ticker', e.target.value)} required />
             </div>
 
             <div>
@@ -101,10 +109,13 @@ export default function AddTradeModal({ accounts, defaultAccountId, onClose, onS
 
             <div>
               <label className="field-label" htmlFor="at-type">Instrument Type</label>
-              <select id="at-type" style={fieldStyle} value={form.instrument_type} onChange={e => update('instrument_type', e.target.value)}>
+              <select id="at-type" style={fieldStyle} value={form.instrument_type} onChange={e => setForm(p => ({ ...p, instrument_type: e.target.value, multiplier: e.target.value === 'OPTION' ? 100 : e.target.value === 'FUTURE' ? '' : 1 }))}>
                 <option value="STOCK">Stock</option>
                 <option value="OPTION">Option</option>
                 <option value="FUTURE">Future</option>
+                <option value="CRYPTO">Crypto</option>
+                <option value="FOREX">Forex</option>
+                <option value="GOLD">Gold</option>
               </select>
             </div>
 
@@ -127,27 +138,45 @@ export default function AddTradeModal({ accounts, defaultAccountId, onClose, onS
 
             <div>
               <label className="field-label" htmlFor="at-entry">Entry Price</label>
-              <input id="at-entry" type="number" step="0.01" style={fieldStyle} placeholder="0.00" value={form.entry_price} onChange={e => update('entry_price', e.target.value)} required />
+              <input id="at-entry" type="number" step="any" style={fieldStyle} placeholder="0.00" value={form.entry_price} onChange={e => update('entry_price', e.target.value)} required />
             </div>
 
             <div>
               <label className="field-label" htmlFor="at-exit">Exit Price</label>
-              <input id="at-exit" type="number" step="0.01" style={fieldStyle} placeholder="0.00 (optional)" value={form.exit_price} onChange={e => update('exit_price', e.target.value)} />
+              <input id="at-exit" type="number" step="any" style={fieldStyle} placeholder="0.00 (optional)" value={form.exit_price} onChange={e => update('exit_price', e.target.value)} />
             </div>
 
             <div>
-              <label className="field-label" htmlFor="at-qty">Quantity</label>
-              <input id="at-qty" type="number" min="1" style={fieldStyle} value={form.quantity} onChange={e => update('quantity', e.target.value)} />
+              <label className="field-label" htmlFor="at-qty">Quantity{Number(form.multiplier) > 1 ? ' (contracts / lots)' : form.instrument_type === 'GOLD' ? ' (oz)' : form.instrument_type === 'CRYPTO' ? ' (coins / units)' : form.instrument_type === 'FOREX' ? ' (base units)' : ''}</label>
+              <input id="at-qty" type="number" min="0.000000000001" step="any" required style={fieldStyle} value={form.quantity} onChange={e => update('quantity', e.target.value)} />
             </div>
+
+            <div>
+              <label className="field-label" htmlFor="at-multiplier">{form.instrument_type === 'FUTURE' ? 'Point value per contract' : 'Units per quantity / contract'}</label>
+              <input id="at-multiplier" type="number" min="0.000000000001" step="any" required style={fieldStyle} value={form.multiplier} onChange={e => update('multiplier', e.target.value)} />
+            </div>
+            <div>
+              <label className="field-label" htmlFor="at-currency">Price quote currency</label>
+              <input id="at-currency" required style={fieldStyle} value={form.quote_currency} onChange={e => setForm(p => ({ ...p, quote_currency: e.target.value.toUpperCase(), quote_to_usd_rate: e.target.value.toUpperCase() === 'USD' ? 1 : '' }))} />
+            </div>
+            {form.quote_currency !== 'USD' && <div>
+              <label className="field-label" htmlFor="at-conversion">USD per 1 {form.quote_currency || 'quote currency'}</label>
+              <input id="at-conversion" type="number" min="0.000000000001" step="any" required style={fieldStyle} value={form.quote_to_usd_rate} onChange={e => update('quote_to_usd_rate', e.target.value)} />
+            </div>}
+            <p className="text-muted" style={{ gridColumn: '1 / -1', fontSize: 12, margin: 0 }}>
+              Use contract size 1 for coins, base currency units, or ounces. For broker lots, enter your broker's units per lot.
+              {' '}{form.quantity || 0} × {form.multiplier || 0} = {Number(form.quantity || 0) * Number(form.multiplier || 0)} units.
+              {' '}P&amp;L and commissions are in USD; non-USD quotes use the conversion rate you enter.
+            </p>
 
             <div>
               <label className="field-label" htmlFor="at-comm">Commissions ($)</label>
-              <input id="at-comm" type="number" step="0.01" min="0" style={fieldStyle} value={form.commissions} onChange={e => update('commissions', e.target.value)} />
+              <input id="at-comm" type="number" step="any" min="0" style={fieldStyle} value={form.commissions} onChange={e => update('commissions', e.target.value)} />
             </div>
 
             <div>
               <label className="field-label" htmlFor="at-stop">Stop Loss</label>
-              <input id="at-stop" type="number" step="0.01" style={fieldStyle} placeholder="Price level" value={form.stop_loss} onChange={e => update('stop_loss', e.target.value)} />
+              <input id="at-stop" type="number" step="any" style={fieldStyle} placeholder="Price level" value={form.stop_loss} onChange={e => update('stop_loss', e.target.value)} />
             </div>
 
             <div>

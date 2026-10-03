@@ -36,7 +36,7 @@ def init_db():
             trade_group TEXT NOT NULL,
             date TEXT NOT NULL,
             ticker TEXT NOT NULL,
-            instrument_type TEXT NOT NULL CHECK(instrument_type IN ('STOCK','OPTION','FUTURE')),
+            instrument_type TEXT NOT NULL CHECK(instrument_type IN ('STOCK','OPTION','FUTURE','CRYPTO','FOREX','GOLD')),
             side TEXT NOT NULL CHECK(side IN ('LONG','SHORT')),
             gross_pnl REAL,
             net_pnl REAL,
@@ -126,6 +126,7 @@ def init_db():
 
     # Safe migrations — ignored if column already exists
     for ddl in [
+        "ALTER TABLE trades ADD COLUMN swaps REAL NOT NULL DEFAULT 0",
         "ALTER TABLE trade_analysis ADD COLUMN target_price REAL",
         "ALTER TABLE trade_analysis ADD COLUMN trade_rating INTEGER",
         "ALTER TABLE trade_analysis ADD COLUMN idea_source TEXT",
@@ -149,7 +150,49 @@ def init_db():
         except Exception:
             pass
 
+    migrate_asset_types(conn)
     conn.close()
+
+
+def migrate_asset_types(conn):
+    """Rebuild the CHECK constraint transactionally, preserving every column and ID."""
+    schema = conn.execute("SELECT sql FROM sqlite_master WHERE type='table' AND name='trades'").fetchone()[0]
+    old = "'STOCK','OPTION','FUTURE'"
+    if "'CRYPTO'" in schema:
+        return
+    if old not in schema:
+        raise RuntimeError('Unrecognized trades schema; asset migration was not applied.')
+    # SQLite backup includes the WAL. Keep a recoverable pre-migration copy.
+    path = next((row[2] for row in conn.execute('PRAGMA database_list') if row[1] == 'main'), '')
+    if path:
+        backup_path = Path(path + '.before-multi-asset.bak')
+        if not backup_path.exists():
+            with sqlite3.connect(backup_path) as backup:
+                conn.backup(backup)
+    indexes = [row[0] for row in conn.execute("SELECT sql FROM sqlite_master WHERE tbl_name='trades' AND type IN ('index','trigger') AND sql IS NOT NULL")]
+    columns = ','.join('"' + row[1] + '"' for row in conn.execute('PRAGMA table_info(trades)'))
+    sequence = conn.execute("SELECT seq FROM sqlite_sequence WHERE name='trades'").fetchone()
+    conn.commit()
+    conn.execute('PRAGMA foreign_keys=OFF')
+    try:
+        conn.execute('BEGIN IMMEDIATE')
+        new_schema = schema.replace('CREATE TABLE trades', 'CREATE TABLE trades_assets_new', 1).replace(old, old + ",'CRYPTO','FOREX','GOLD'")
+        conn.execute(new_schema)
+        conn.execute(f'INSERT INTO trades_assets_new ({columns}) SELECT {columns} FROM trades')
+        conn.execute('DROP TABLE trades')
+        conn.execute('ALTER TABLE trades_assets_new RENAME TO trades')
+        for ddl in indexes:
+            conn.execute(ddl)
+        if sequence:
+            conn.execute("UPDATE sqlite_sequence SET seq=MAX(seq,?) WHERE name='trades'", (sequence[0],))
+        if conn.execute('PRAGMA foreign_key_check').fetchone():
+            raise RuntimeError('Asset migration failed its foreign-key check.')
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.execute('PRAGMA foreign_keys=ON')
 
 
 def row_to_dict(row: sqlite3.Row) -> dict:

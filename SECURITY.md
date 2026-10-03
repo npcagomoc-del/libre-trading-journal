@@ -2,7 +2,7 @@
 
 ## Supported Versions
 
-Trading Journal AI is an actively developed open-source project.
+Libre Trading Journal is based on Trading-Journal-AI. This source preview is intended for local, single-user operation on loopback, with optional external AI and price providers. It is not an authenticated shared web service.
 
 Security fixes are generally applied to the latest released version and the current `main` branch.
 
@@ -14,9 +14,9 @@ Security fixes are generally applied to the latest released version and the curr
 
 ## Reporting a Vulnerability
 
-If you discover a security vulnerability in Trading Journal AI, please **do not open a public GitHub issue**.
+If you discover a security vulnerability in Libre Trading Journal, please **do not open a public GitHub issue**.
 
-Instead, please use GitHub's **private vulnerability reporting** feature from the Security section of this repository.
+Use GitHub's **private vulnerability reporting** from this repository's Security section when enabled. If no private reporting option is available, obtain a private maintainer contact before sending reproduction details or secrets. Do not route Libre-specific reports to the upstream project's maintainers.
 
 Please include, when possible:
 
@@ -30,7 +30,7 @@ Please avoid publicly disclosing the vulnerability until it has been reviewed an
 
 ## Security-Sensitive Areas
 
-Trading Journal AI works with potentially sensitive information including:
+Libre Trading Journal works with potentially sensitive information including:
 
 * Broker trade exports
 * Trading history and performance data
@@ -42,7 +42,7 @@ Reports involving exposure of this information, unauthorized access, credential 
 
 ## Data and Credentials
 
-Trading Journal AI is designed as a local-first application.
+Libre Trading Journal is designed as a local-first application. AI provider keys and ChatGPT/MT5 credentials are installation-specific and excluded from journal backup ZIPs. On Windows those credential stores use DPAPI; AI API/ChatGPT stores on other platforms use restricted file permissions without encryption. Optional Alpaca keys are stored in the local plaintext `backend/.env`, which is also excluded from backups and source control. Keep all keys, runtime data and backups private.
 
 Users should never commit API keys, `.env` files, local databases, broker exports, or other private trading data to the repository.
 

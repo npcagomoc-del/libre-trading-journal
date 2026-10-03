@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { X, Send, Brain as BrainIcon } from 'lucide-react';
 import { brainApi } from '../api';
+import { AIProviderStatus } from './AIProviderSettings';
 
 // ── Markdown renderer ─────────────────────────────────────────────────────────
 
@@ -61,7 +62,7 @@ const SUGGESTIONS = [
 
 // ── Brain component ───────────────────────────────────────────────────────────
 
-export default function Brain({ accountId, open: openProp, onOpenChange }) {
+export default function Brain({ accountId, open: openProp, onOpenChange, onNavigate }) {
   // Controlled by the app header when it passes `open`; falls back to its own state.
   const [openLocal, setOpenLocal] = useState(false);
   const open = openProp ?? openLocal;
@@ -69,6 +70,8 @@ export default function Brain({ accountId, open: openProp, onOpenChange }) {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
+  const [connection, setConnection] = useState(null);
+  const ready = connection?.configured;
   const bottomRef = useRef(null);
   const inputRef = useRef(null);
   const launcherRef = useRef(null);
@@ -86,7 +89,7 @@ export default function Brain({ accountId, open: openProp, onOpenChange }) {
 
   const send = async (text) => {
     const msg = (text || input).trim();
-    if (!msg || loading) return;
+    if (!msg || loading || !ready) return;
     setInput('');
 
     const userMsg = { role: 'user', content: msg };
@@ -127,6 +130,7 @@ export default function Brain({ accountId, open: openProp, onOpenChange }) {
             </button>
           </div>
 
+          <AIProviderStatus onStatus={setConnection} onSettings={onNavigate ? () => { onNavigate('settings'); setOpen(false); } : undefined} />
           {/* Messages */}
           <div style={{ flex: 1, overflowY: 'auto', padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 10 }} aria-live="polite">
             {messages.length === 0 && (
@@ -136,7 +140,7 @@ export default function Brain({ accountId, open: openProp, onOpenChange }) {
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                   {SUGGESTIONS.map((s, i) => (
-                    <button key={i} type="button" className="brain-suggestion" onClick={() => send(s)}>
+                    <button key={i} type="button" className="brain-suggestion" disabled={!ready} onClick={() => send(s)}>
                       {s}
                     </button>
                   ))}
@@ -178,14 +182,14 @@ export default function Brain({ accountId, open: openProp, onOpenChange }) {
               onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); } }}
               placeholder="Ask Brain anything..."
               aria-label="Message Brain"
-              disabled={loading}
+              disabled={loading || !ready}
               style={{ flex: 1, fontSize: 14 }}
             />
             <button
               type="button"
               className="btn btn-primary btn-icon"
               onClick={() => send()}
-              disabled={loading || !input.trim()}
+              disabled={loading || !ready || !input.trim()}
               aria-label="Send message"
             >
               <Send size={15} />

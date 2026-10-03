@@ -186,7 +186,7 @@ const FEATURES = [
   {
     name: 'Diary',
     icon: '📓',
-    description: 'AI-powered trade diary. Upload handwritten notes, screenshots, or typed text. Claude extracts setup, entry/exit reason, emotional state, mistakes, and R-multiple.',
+    description: 'AI-powered trade diary. Choose ChatGPT sign-in, an OpenAI API key, a Claude API key, or an OpenRouter API key in Settings. Your selected model extracts setup, entry/exit reason, emotional state, mistakes, and R-multiple. Screenshots require image support.',
     tips: [
       'The more detail you write in your pre/post-market notes, the better the AI extraction.',
       'Diary entries are matched to trades automatically by ticker and date.',

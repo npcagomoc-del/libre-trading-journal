@@ -1,21 +1,24 @@
 import os
 import json
+import math
 import sqlite3
 import aiofiles
 from pathlib import Path
 from datetime import datetime, timedelta
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Depends, Query
+from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Depends, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel
+from starlette.concurrency import run_in_threadpool
+from pydantic import BaseModel, Field
 from dotenv import load_dotenv
 
 import httpx
 
 from database import init_db, get_db, row_to_dict
+from instruments import ASSET_TYPES, positive_number, sizing
 from csv_parser import parse_broker_csv, FUTURES_MULTIPLIERS
 from ai_analysis import (
     analyze_diary_entry,
@@ -29,6 +32,13 @@ from ai_analysis import (
 )
 from daily_summary import build_daily_context, generate_daily_summary
 from library import router as library_router, init_library_tables, apply_aliases, library_names
+from chatgpt_routes import router as chatgpt_router, require_mutation, require_local
+from chatgpt_provider import CoachError
+from ai_provider_routes import router as ai_provider_router
+from backup_routes import create_router as create_backup_router
+from journal_maintenance import JournalMaintenanceMiddleware
+from mt5_routes import router as mt5_router
+import mt5_market_data as mt5_market
 
 load_dotenv()
 
@@ -47,7 +57,7 @@ async def lifespan(app: FastAPI):
     yield
 
 
-app = FastAPI(title="Trading Journal AI API", lifespan=lifespan)
+app = FastAPI(title="Libre Trading Journal API", lifespan=lifespan)
 
 # This runs on your own machine, so any localhost port is accepted: when 3010 is
 # busy the dev server offers 3011, and the app should still work. FRONTEND_ORIGINS
@@ -70,6 +80,30 @@ app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
 
 # Settings > Library (strategies, sources, tags)
 app.include_router(library_router)
+app.include_router(chatgpt_router)
+app.include_router(ai_provider_router)
+app.include_router(mt5_router)
+app.include_router(create_backup_router(lambda: UPLOAD_DIR))
+
+# Hold the journal lease until response streaming and dependency cleanup finish.
+# Export/restore drain ordinary journal requests before taking a full snapshot.
+app.add_middleware(JournalMaintenanceMiddleware)
+
+
+@app.middleware("http")
+async def protect_local_ai(request, call_next):
+    # Reject foreign origins before an authenticated inference can consume usage.
+    if request.method != "OPTIONS" and request.url.path in {"/api/brain", "/api/insights", "/api/daily-summary", "/api/weekly-summary", "/api/upload-diary"}:
+        try:
+            require_mutation(request)
+        except HTTPException as exc:
+            return JSONResponse(status_code=exc.status_code, content={"detail": exc.detail})
+    return await call_next(request)
+
+
+@app.exception_handler(CoachError)
+async def coach_error_handler(request, exc):
+    return JSONResponse(status_code=exc.status, content={"detail": str(exc), "ai_error": exc.detail()})
 
 
 # ── Dependency ─────────────────────────────────────────────────────────────────
@@ -437,18 +471,28 @@ async def import_csv(
         _replace_regrouped_trades(conn, account_id, trades)
         for trade in trades:
             try:
+                previous_broker_values = {}
+                if trade['source'] == 'exness':
+                    previous_row = conn.execute('SELECT executions FROM trades WHERE trade_group=? AND account_id=?',
+                        (trade['trade_group'], account_id)).fetchone()
+                    if previous_row:
+                        previous_fills = json.loads(previous_row['executions'])
+                        previous_broker_values = previous_fills[0] if previous_fills else {}
                 conn.execute("""
                     INSERT INTO trades
                         (account_id, trade_group, date, ticker, instrument_type, side,
                          gross_pnl, net_pnl, commissions, executions,
-                         option_expiry, option_strike, option_type, source)
-                    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                         option_expiry, option_strike, option_type, source, swaps)
+                    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
                     ON CONFLICT(trade_group, account_id) DO UPDATE SET
                         date=excluded.date,
+                        ticker=excluded.ticker,
+                        instrument_type=excluded.instrument_type,
                         side=excluded.side,
                         gross_pnl=excluded.gross_pnl,
                         net_pnl=excluded.net_pnl,
                         commissions=excluded.commissions,
+                        swaps=excluded.swaps,
                         executions=excluded.executions,
                         imported_at=datetime('now')
                 """, (
@@ -456,8 +500,15 @@ async def import_csv(
                     trade['ticker'], trade['instrument_type'], trade['side'],
                     trade['gross_pnl'], trade['net_pnl'], trade['commissions'],
                     trade['executions'], trade['option_expiry'],
-                    trade['option_strike'], trade['option_type'], trade['source'],
+                    trade['option_strike'], trade['option_type'], trade['source'], trade.get('swaps', 0),
                 ))
+                if trade['source'] == 'exness':
+                    conn.execute('''INSERT INTO trade_analysis (trade_group,ticker,date,stop_loss,target_price)
+                        VALUES (?,?,?,?,?) ON CONFLICT(trade_group) DO UPDATE SET ticker=excluded.ticker,date=excluded.date,
+                        stop_loss=CASE WHEN trade_analysis.stop_loss IS ? THEN excluded.stop_loss ELSE trade_analysis.stop_loss END,
+                        target_price=CASE WHEN trade_analysis.target_price IS ? THEN excluded.target_price ELSE trade_analysis.target_price END''',
+                        (trade['trade_group'], trade['ticker'], trade['date'], trade.get('stop_loss'), trade.get('target_price'),
+                         previous_broker_values.get('stop_loss') or None, previous_broker_values.get('take_profit') or None))
                 imported += 1
             except Exception as e:
                 errors.append({"trade_group": trade.get('trade_group'), "error": str(e)})
@@ -484,10 +535,13 @@ class TradeCreate(BaseModel):
     ticker: str
     instrument_type: str = "STOCK"
     side: str
-    entry_price: float
-    exit_price: float | None = None
-    quantity: int = 1
-    commissions: float = 0.0
+    entry_price: float = Field(gt=0, allow_inf_nan=False)
+    exit_price: float | None = Field(default=None, ge=0, allow_inf_nan=False)
+    quantity: float = Field(default=1, gt=0, allow_inf_nan=False)
+    multiplier: float | None = Field(default=None, gt=0, allow_inf_nan=False)
+    quote_currency: str = "USD"
+    quote_to_usd_rate: float | None = Field(default=None, gt=0, allow_inf_nan=False)
+    commissions: float = Field(default=0, ge=0, allow_inf_nan=False)
     strategy: str | None = None
     stop_loss: float | None = None
     risk_per_trade: str | None = None
@@ -498,13 +552,13 @@ class TradeCreate(BaseModel):
     time: str | None = None
 
 
-def compute_manual_pnl(side: str, entry: float, exit_price: float | None, qty: int, commissions: float) -> tuple[float, float]:
+def compute_manual_pnl(side: str, entry: float, exit_price: float | None, qty: float, commissions: float, multiplier: float = 1, conversion: float = 1) -> tuple[float, float]:
     if exit_price is None:
         return 0.0, -commissions
     if side.upper() == 'LONG':
-        gross = (exit_price - entry) * qty
+        gross = (exit_price - entry) * qty * multiplier * conversion
     else:
-        gross = (entry - exit_price) * qty
+        gross = (entry - exit_price) * qty * multiplier * conversion
     return round(gross, 2), round(gross - commissions, 2)
 
 
@@ -515,7 +569,7 @@ def _is_open_position(trade: dict) -> bool:
     exit_action  = 'SOLD' if side == 'LONG' else 'BOT'
     entry_qty = sum(e.get('qty', 0) for e in execs if e.get('action') == entry_action)
     exit_qty  = sum(e.get('qty', 0) for e in execs if e.get('action') == exit_action)
-    return entry_qty > 0 and entry_qty != exit_qty
+    return entry_qty > 0 and abs(entry_qty - exit_qty) > 1e-10
 
 
 @app.get("/api/trades")
@@ -582,8 +636,13 @@ def create_trade(data: TradeCreate, conn: sqlite3.Connection = Depends(get_conne
     if not account:
         raise ValueError(f"Account {data.account_id} not found")
 
+    data.instrument_type = data.instrument_type.upper()
+    if data.instrument_type not in ASSET_TYPES or data.side.upper() not in {'LONG', 'SHORT'}:
+        raise ValueError('Choose a supported instrument and LONG or SHORT side.')
+    contract = sizing(data.instrument_type, data.ticker, data.model_dump())
     gross_pnl, net_pnl = compute_manual_pnl(
-        data.side, data.entry_price, data.exit_price, data.quantity, data.commissions
+        data.side, data.entry_price, data.exit_price, data.quantity, data.commissions,
+        contract['multiplier'], contract['quote_to_usd_rate']
     )
 
     # Build a manual trade group key
@@ -595,15 +654,17 @@ def create_trade(data: TradeCreate, conn: sqlite3.Connection = Depends(get_conne
         'action': 'BOT' if data.side.upper() == 'LONG' else 'SOLD',
         'qty': data.quantity,
         'price': data.entry_price,
-        'commission': data.commissions / 2,
+        'commission': data.commissions / 2 if data.exit_price is not None else data.commissions,
+        **contract,
     }
-    if data.exit_price:
+    if data.exit_price is not None:
         execution2 = {
             'time': trade_time,
             'action': 'SOLD' if data.side.upper() == 'LONG' else 'BOT',
             'qty': data.quantity,
             'price': data.exit_price,
             'commission': data.commissions / 2,
+            **contract,
         }
         executions = json.dumps([execution, execution2])
     else:
@@ -648,6 +709,9 @@ def update_trade(trade_id: int, data: dict, conn: sqlite3.Connection = Depends(g
                'instrument_type', 'option_expiry', 'option_strike', 'option_type'}
     updates = {k: v for k, v in data.items() if k in allowed}
 
+    if trade.get('source') == 'exness' and updates:
+        raise HTTPException(status_code=400, detail='Update Exness position data in the CSV and reimport. Use execution editing for dates/times/fees, or the analysis panel for notes and strategy.')
+
     if trade.get('source') == 'imported':
         updates['source'] = 'edited'
 
@@ -674,24 +738,21 @@ def _recalculate_and_save(trade: dict, execs: list, conn, trade_id: int):
 
     entry_qty = sum(e['qty'] for e in entry_fills)
     exit_qty  = sum(e['qty'] for e in exit_fills)
-    is_open   = (entry_qty != exit_qty) or exit_qty == 0
+    is_open   = abs(entry_qty - exit_qty) > 1e-10 or exit_qty == 0
 
-    if is_open:
-        gross_pnl, net_pnl = 0.0, 0.0
+    if trade.get('source') == 'exness':
+        gross_pnl = trade['gross_pnl']
+        net_pnl = round(gross_pnl - sum(e.get('commission', 0) for e in execs) + (trade.get('swaps') or 0), 2)
+    elif is_open:
+        gross_pnl, net_pnl = 0.0, -sum(e.get('commission', 0) for e in execs)
     else:
         avg_entry = sum(e['qty'] * e['price'] for e in entry_fills) / entry_qty
         avg_exit  = sum(e['qty'] * e['price'] for e in exit_fills)  / exit_qty
-        if instrument == 'OPTION':
-            multiplier = 100
-        elif instrument == 'FUTURE':
-            multiplier = next(
-                (v for k, v in FUTURES_MULTIPLIERS.items() if ticker.upper().startswith(k.upper())), 1
-            )
-        else:
-            multiplier = 1
-        gross_pnl = (avg_entry - avg_exit if side == 'SHORT' else avg_exit - avg_entry) * entry_qty * multiplier
+        contract = sizing(instrument, ticker, execs[0])
+        conversion = sizing(instrument, ticker, max(exit_fills, key=lambda e: (e.get('date', trade['date']), e.get('time', ''))))['quote_to_usd_rate']
+        gross_pnl = (avg_entry - avg_exit if side == 'SHORT' else avg_exit - avg_entry) * entry_qty * contract['multiplier'] * conversion
         commissions_total = sum(e.get('commission', 0) for e in execs)
-        net_pnl   = round(gross_pnl - commissions_total, 2)
+        net_pnl   = round(gross_pnl - commissions_total + (trade.get('swaps') or 0), 2)
         gross_pnl = round(gross_pnl, 2)
 
     commissions = round(sum(e.get('commission', 0) for e in execs), 2)
@@ -715,7 +776,7 @@ def _parse_exec_body(body: dict, fallback_date: str) -> dict:
         'date': body.get('date', fallback_date),
         'time': body.get('time', ''),
         'action': body['action'].upper(),
-        'qty': int(body['qty']),
+        'qty': positive_number(body['qty'], 'Quantity'),
         'price': float(body['price']),
         'commission': float(body.get('commission', 0)),
     }
@@ -727,8 +788,15 @@ def add_execution(trade_id: int, body: dict, conn: sqlite3.Connection = Depends(
     if not row:
         raise HTTPException(status_code=404, detail="Trade not found")
     trade = row_to_dict(row)
+    if trade.get('source') == 'exness':
+        raise HTTPException(status_code=400, detail='Exness positions keep their broker-reported results. Update the position CSV and reimport to change fills.')
     execs = json.loads(trade.get('executions') or '[]')
-    execs.append(_parse_exec_body(body, trade['date']))
+    execution = _parse_exec_body(body, trade['date'])
+    contract_values = dict(execs[0]) if execs else dict(body)
+    if body.get('quote_to_usd_rate') is not None:
+        contract_values['quote_to_usd_rate'] = body['quote_to_usd_rate']
+    execution.update(sizing(trade['instrument_type'], trade['ticker'], contract_values))
+    execs.append(execution)
     return _recalculate_and_save(trade, execs, conn, trade_id)
 
 
@@ -741,7 +809,20 @@ def update_execution(trade_id: int, exec_idx: int, body: dict, conn: sqlite3.Con
     execs = json.loads(trade.get('executions') or '[]')
     if exec_idx < 0 or exec_idx >= len(execs):
         raise HTTPException(status_code=404, detail="Execution index out of range")
-    execs[exec_idx] = _parse_exec_body(body, trade['date'])
+    execution = _parse_exec_body(body, trade['date'])
+    if trade.get('source') == 'exness':
+        original = execs[exec_idx]
+        if any(execution[key] != original[key] for key in ('qty', 'price', 'action')):
+            raise HTTPException(status_code=400, detail='Update Exness prices/lots in the position CSV and reimport so broker profit stays accurate. Dates, times and fees can be edited here.')
+        if not math.isfinite(execution['commission']) or execution['commission'] < 0:
+            raise HTTPException(status_code=400, detail='Commission must be a finite, nonnegative USD expense.')
+        execs[exec_idx] = {**original, **execution}
+        return _recalculate_and_save(trade, execs, conn, trade_id)
+    contract_values = dict(execs[exec_idx])
+    if body.get('quote_to_usd_rate') is not None:
+        contract_values['quote_to_usd_rate'] = body['quote_to_usd_rate']
+    execution.update(sizing(trade['instrument_type'], trade['ticker'], contract_values))
+    execs[exec_idx] = execution
     return _recalculate_and_save(trade, execs, conn, trade_id)
 
 
@@ -751,6 +832,8 @@ def delete_execution(trade_id: int, exec_idx: int, conn: sqlite3.Connection = De
     if not row:
         raise HTTPException(status_code=404, detail="Trade not found")
     trade = row_to_dict(row)
+    if trade.get('source') == 'exness':
+        raise HTTPException(status_code=400, detail='Exness positions keep their original fills. Delete the whole trade or update the position CSV and reimport.')
     execs = json.loads(trade.get('executions') or '[]')
     if exec_idx < 0 or exec_idx >= len(execs):
         raise HTTPException(status_code=404, detail="Execution index out of range")
@@ -1139,18 +1222,18 @@ async def upload_diary(
     conn.commit()
     diary_entry_id = cursor.lastrowid
 
-    # Build trades context for Claude
+    # Build trades context for ChatGPT
     trades_context = build_trades_context(conn, date, account_id)
 
-    # Call Claude — image vision or text depending on file type
+    # Call ChatGPT — image vision or text depending on file type
     analysis_error = None
     analysis = None
     try:
         if ext in ALLOWED_TEXT_EXTENSIONS:
             text_content = raw.decode('utf-8', errors='replace')
-            analysis = analyze_diary_text(text_content, date, trades_context)
+            analysis = await run_in_threadpool(analyze_diary_text, text_content, date, trades_context)
         else:
-            analysis = analyze_diary_entry(str(save_path.absolute()), date, trades_context)
+            analysis = await run_in_threadpool(analyze_diary_entry, str(save_path.absolute()), date, trades_context)
         analysis = apply_aliases(conn, analysis)
         # Persist analysis
         conn.execute(
@@ -1159,6 +1242,8 @@ async def upload_diary(
         )
         conn.commit()
         save_analysis_to_db(conn, diary_entry_id, analysis)
+    except CoachError as e:
+        analysis_error = str(e)
     except Exception as e:
         analysis_error = str(e)
 
@@ -1282,9 +1367,23 @@ async def _fetch_alpaca_bars(client, url, base_params, headers, max_bars=5000):
 @app.get("/api/chart/{ticker}/{date}")
 async def get_chart(
     ticker: str, date: str,
+    request: Request,
     timeframe: str = Query("5Min"),
     days_back: int = Query(1, ge=1),
+    instrument_type: str = Query('STOCK'),
+    account_id: int | None = Query(None),
+    utc_offset_hours: float | None = Query(None, ge=-14, le=14),
+    conn: sqlite3.Connection = Depends(get_connection),
 ):
+    config = mt5_market.load_config(conn, account_id) if account_id else None
+    if config and instrument_type.upper() in {'FOREX', 'GOLD', 'CRYPTO'}:
+        require_local(request)
+        try:
+            return await run_in_threadpool(mt5_market.candles, config, ticker, date, timeframe, days_back, utc_offset_hours)
+        except mt5_market.MarketDataError as error:
+            return {'ticker': ticker, 'date': date, 'bars': [], 'provider': 'mt5', 'warning': str(error)}
+    if instrument_type.upper() in {'CRYPTO', 'FOREX', 'GOLD'}:
+        return {'ticker': ticker, 'date': date, 'bars': [], 'warning': 'Connect this journal account to MT5 in More → Settings → Market data to load forex/gold charts.'}
     if not ALPACA_KEY or ALPACA_KEY == "your_alpaca_api_key_here":
         return {
             "ticker": ticker, "date": date, "bars": [],
@@ -2008,6 +2107,8 @@ def get_insights(
     try:
         insights_text = generate_insights(kpis)
         return {"insights": insights_text}
+    except CoachError:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -2071,6 +2172,8 @@ def get_weekly_summary(
 
     try:
         result = generate_weekly_summary(week_context)
+    except CoachError:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -2123,15 +2226,12 @@ def get_daily_summary(
         if not context['trades']:
             return {"date": date, "cached": False, "no_trades": True, "narrative": "No trades recorded for this date."}
         summary = generate_daily_summary(context)
+    except CoachError as e:
+        if e.code in {"not_connected", "plan_usage_disabled", "session_expired"}:
+            return {"date": date, "cached": False, "unavailable": True,
+                    "narrative": str(e), "ai_error": e.detail()}
+        raise
     except Exception as e:
-        # Without an API key this is the expected path, not a server fault.
-        if not os.getenv("ANTHROPIC_API_KEY"):
-            return {
-                "date": date,
-                "cached": False,
-                "unavailable": True,
-                "narrative": "Add ANTHROPIC_API_KEY to backend/.env to generate a review for this day.",
-            }
         raise HTTPException(status_code=500, detail=str(e))
 
     conn.execute(
@@ -2163,7 +2263,9 @@ async def brain_chat(
 
     try:
         context = build_brain_context(conn, account_id)
-        response_text = generate_brain_response(messages, context)
+        response_text = await run_in_threadpool(generate_brain_response, messages, context)
         return {"response": response_text}
+    except CoachError:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

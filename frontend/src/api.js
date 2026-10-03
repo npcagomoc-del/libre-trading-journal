@@ -4,7 +4,16 @@ import axios from 'axios';
 // another origin (a second instance, a container, a LAN machine).
 export const API_BASE = (process.env.REACT_APP_API_URL ?? 'http://localhost:8010').replace(/\/+$/, '');
 
-const api = axios.create({ baseURL: API_BASE });
+const api = axios.create({ baseURL: API_BASE, headers: { 'X-Journal-Request': '1' } });
+
+export const aiApi = {
+  status: () => api.get('/api/ai/status'),
+  connect: (registrationId = null) => api.post('/api/ai/connect', { registration_id: registrationId }),
+  models: () => api.get('/api/ai/models'),
+  setModel: (slug) => api.put('/api/ai/model', { slug }),
+  disconnect: () => api.post('/api/ai/disconnect'),
+  verify: () => api.post('/api/ai/verify'),
+};
 
 export const accountsApi = {
   list: () => api.get('/api/accounts'),
@@ -51,8 +60,40 @@ export const diaryApi = {
 };
 
 export const chartApi = {
-  get: (ticker, date, timeframe = '1Min', daysBack = 1) =>
-    api.get(`/api/chart/${encodeURIComponent(ticker)}/${date}`, { params: { timeframe, days_back: daysBack } }),
+  get: (ticker, date, timeframe = '1Min', daysBack = 1, instrumentType = 'STOCK', accountId, utcOffsetHours) =>
+    api.get(`/api/chart/${encodeURIComponent(ticker)}/${date}`, { params: { timeframe, days_back: daysBack, instrument_type: instrumentType, account_id: accountId, utc_offset_hours: utcOffsetHours } }),
+};
+
+export const aiProvidersApi = {
+  list: () => api.get('/api/ai/providers'),
+  select: (provider) => api.put('/api/ai/provider', { provider }),
+  configure: (provider, config) => api.put(`/api/ai/providers/${provider}/config`, config),
+  remove: (provider) => api.delete(`/api/ai/providers/${provider}/config`),
+  models: (provider) => api.get(`/api/ai/providers/${provider}/models`),
+  verify: (provider) => api.post(`/api/ai/providers/${provider}/verify`),
+};
+
+export const backupsApi = {
+  listRecovery: () => api.get('/api/backups/recovery'),
+  export: () => api.post('/api/backups/export', null, { responseType: 'blob' }),
+  inspect: (file) => {
+    const data = new FormData();
+    data.append('file', file);
+    return api.post('/api/backups/inspect', data);
+  },
+  restore: (file, confirmation) => {
+    const data = new FormData();
+    data.append('file', file);
+    data.append('confirmation', confirmation);
+    return api.post('/api/backups/restore', data);
+  },
+  recovery: (id) => api.get(`/api/backups/recovery/${encodeURIComponent(id)}`, { responseType: 'blob' }),
+};
+
+export const marketDataApi = {
+  status: (id) => api.get(`/api/market-data/${id}`),
+  connect: (id, data) => api.post(`/api/market-data/${id}/connect`, data),
+  disconnect: (id) => api.delete(`/api/market-data/${id}`),
 };
 
 export const insightsApi = {

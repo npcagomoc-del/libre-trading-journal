@@ -66,6 +66,7 @@ export default function DailySummary({ accountId, date, onDateChange, onOpenDeta
   const [kpis, setKpis] = useState(null);
   const [, setDiary] = useState(null);
   const [summary, setSummary] = useState(null);
+  const [summaryError, setSummaryError] = useState('');
   const [loading, setLoading] = useState(true);
   const [summaryLoading, setSummaryLoading] = useState(true);
   const [regenerating, setRegenerating] = useState(false);
@@ -90,6 +91,7 @@ export default function DailySummary({ accountId, date, onDateChange, onOpenDeta
     setLoading(true);
     setSummaryLoading(true);
     setSummary(null);
+    setSummaryError('');
     setCbDismissed(false);
     try {
       const params = { date_from: d, date_to: d };
@@ -122,7 +124,7 @@ export default function DailySummary({ accountId, date, onDateChange, onOpenDeta
       const sumRes = await dailySummaryApi.get(sumParams);
       setSummary(sumRes.data);
     } catch (e) {
-      console.error('Failed to load summary', e);
+      setSummaryError(e.response?.data?.detail || e.message || 'Could not generate the coaching report.');
     } finally {
       setSummaryLoading(false);
     }
@@ -138,6 +140,7 @@ export default function DailySummary({ accountId, date, onDateChange, onOpenDeta
 
   const handleRegenerate = async () => {
     setRegenerating(true);
+    setSummaryError('');
     setSummaryLoading(true);
     setSummary(null);
     try {
@@ -146,7 +149,7 @@ export default function DailySummary({ accountId, date, onDateChange, onOpenDeta
       const res = await dailySummaryApi.get(params);
       setSummary(res.data);
     } catch (e) {
-      console.error('Regenerate failed', e);
+      setSummaryError(e.response?.data?.detail || e.message || 'Could not regenerate the coaching report.');
     } finally {
       setRegenerating(false);
       setSummaryLoading(false);
@@ -198,6 +201,10 @@ export default function DailySummary({ accountId, date, onDateChange, onOpenDeta
           </button>
         </>}
       />
+
+      {summaryError && <div role="alert" className="notice neg" style={{ marginBottom: 16 }}>
+        {summaryError} Check the selected AI provider and connection in More → Settings.
+      </div>}
 
       {/* ── KPI Strip ── */}
       {loading ? (

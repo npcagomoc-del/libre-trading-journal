@@ -22,7 +22,6 @@ where people can ask questions and disagree without being attacked.
 ## Enforcement
 
 The maintainer may edit or remove comments, close issues and pull requests, and block people who
-break these rules. To report a problem privately, message [@tapetoedge on X](https://x.com/tapetoedge)
-or use GitHub's private reporting on the Security tab. Reports are kept confidential.
+break these rules. Report concerns to the Libre repository maintainer through an available private contact channel. Security vulnerabilities follow [SECURITY.md](SECURITY.md). Do not send reports about Libre changes to the original upstream creator.
 
 This code is adapted from the ideas in the [Contributor Covenant](https://www.contributor-covenant.org/).

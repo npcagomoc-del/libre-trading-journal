@@ -12,7 +12,11 @@ permissions:
 jobs:
   backend-tests:
     name: Backend Tests
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
 
     steps:
       - name: Check out repository
@@ -57,4 +61,4 @@ jobs:
 
       - name: Run frontend tests
         working-directory: frontend
-        run: npx craco test --watchAll=false
+        run: npx craco test --watchAll=false --runInBand

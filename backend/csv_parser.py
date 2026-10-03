@@ -1,5 +1,7 @@
 import re
 import json
+from instruments import positive_number
+import math
 import csv
 import io
 from datetime import datetime
@@ -412,7 +414,7 @@ def aggregate_executions(fills: list[dict]) -> dict:
     # Detect open positions: shares bought != shares sold means no realized P&L yet
     qty_bot = sum(f['qty'] for f in fills if f['action'] == 'BOT')
     qty_sold = sum(f['qty'] for f in fills if f['action'] != 'BOT')
-    is_open = qty_bot != qty_sold
+    is_open = abs(qty_bot - qty_sold) > 1e-10
 
     if is_open:
         # Open trade: no realized gain/loss, commissions are the only real cost
@@ -421,6 +423,13 @@ def aggregate_executions(fills: list[dict]) -> dict:
     else:
         # Closed trade: sum signed amounts (buys negative, sells positive in AMOUNT col)
         gross_pnl = sum(f.get('amount', 0.0) for f in fills)
+        if any('quote_to_usd_rate' in f for f in fills):
+            contracts = {(f.get('multiplier', 1), f.get('quote_currency', 'USD')) for f in fills}
+            if len(contracts) != 1:
+                raise ValueError('A position must use the same contract size and quote currency on every fill.')
+            multiplier = fills[0].get('multiplier', 1)
+            conversion = fills[-1].get('quote_to_usd_rate', 1)
+            gross_pnl = sum((1 if f['action'] == 'SOLD' else -1) * f['price'] * f['qty'] * multiplier for f in fills) * conversion
         net_pnl = gross_pnl - commissions
 
     # Serialize executions (drop 'amount' internal field, keep display fields)
@@ -433,6 +442,7 @@ def aggregate_executions(fills: list[dict]) -> dict:
             'qty': f.get('qty', 0),
             'price': f.get('price', 0.0),
             'commission': f.get('commission', 0.0),
+            **{k: f[k] for k in ('multiplier', 'quote_currency', 'quote_to_usd_rate') if k in f},
         })
 
     return {
@@ -687,7 +697,7 @@ def group_executions_by_position(executions: list[dict]) -> tuple[dict, dict]:
 
 def _is_flat(position) -> bool:
     """Position is back to zero. Tolerance so fractional-share fills (IBKR) still close out."""
-    return abs(position) < 1e-6
+    return abs(position) < 1e-10
 
 
 def _option_pos_key(ticker: str, instr: str, expiry, strike, opt_type) -> tuple:
@@ -732,13 +742,14 @@ def load_open_positions_from_db(conn, account_id: int) -> list[dict]:
 def _rebuild_fill_from_db_exec(e: dict, trade_meta: dict) -> dict:
     """Reconstruct a full fill dict from a stored execution + trade metadata."""
     instr = trade_meta['instrument_type']
-    multiplier = 100 if instr == 'OPTION' else 1
+    multiplier = e.get('multiplier', _point_value(trade_meta['ticker'], instr) or 1)
     price = e.get('price', 0.0)
     qty = e.get('qty', 0)
-    amount = price * qty * multiplier
+    amount = price * qty * multiplier * e.get('quote_to_usd_rate', 1)
     if e.get('action') == 'BOT':
         amount = -amount
     return {
+        **{k: e[k] for k in ('multiplier', 'quote_currency', 'quote_to_usd_rate') if k in e},
         'action': e.get('action', ''),
         'qty': qty,
         'ticker': trade_meta['ticker'],
@@ -815,7 +826,7 @@ def overlapping_db_fills(conn, account_id: int, new_execs: list[dict]) -> tuple[
             old_groups.add(meta['trade_group'])
             for e in execs:
                 f = _rebuild_fill_from_db_exec(e, meta)
-                f['amount'] = round(f['amount'] * mult, 2)
+                f['amount'] = round(f['amount'], 2)
                 # keys carry the date the way this broker's parser wrote it
                 slashed = '/' in meta['trade_group'].split('_')[0]
                 f['date'] = _raw_date(f['iso_date']) if slashed else f['iso_date']
@@ -1237,7 +1248,7 @@ def parse_ibkr_csv(content: str, account_id: int, conn=None) -> tuple[list[dict]
 # missing fill changes every P&L number after it.
 
 GENERIC_REQUIRED = ('date', 'time', 'symbol', 'side', 'quantity', 'price')
-GENERIC_OPTIONAL = ('commission', 'asset_type', 'expiry', 'strike', 'put_call', 'multiplier')
+GENERIC_OPTIONAL = ('commission', 'asset_type', 'expiry', 'strike', 'put_call', 'multiplier', 'quote_currency', 'quote_to_usd_rate')
 
 _GENERIC_ALIASES = {
     'ticker': 'symbol', 'qty': 'quantity', 'shares': 'quantity', 'contracts': 'quantity',
@@ -1314,6 +1325,12 @@ def _generic_asset(value, symbol):
         return 'STOCK'
     if v in ('OPTION', 'OPT', 'OPTIONS'):
         return 'OPTION'
+    if v in ('CRYPTO', 'CRYPTOCURRENCY'):
+        return 'CRYPTO'
+    if v in ('FOREX', 'FX'):
+        return 'FOREX'
+    if v in ('GOLD', 'XAU', 'METAL'):
+        return 'GOLD'
     if v in ('FUTURE', 'FUT', 'FUTURES'):
         return 'FUTURE'
     return None
@@ -1367,7 +1384,7 @@ def parse_generic_rows(content):
             qty = abs(_num(cell(cells, 'quantity')))
             if qty == 0:
                 raise ValueError
-            qty = int(qty) if qty == int(qty) else round(qty, 6)
+            qty = int(qty) if qty == int(qty) else qty
         except ValueError:
             qty = None
         try:
@@ -1394,7 +1411,7 @@ def parse_generic_rows(content):
         if commission is None:
             why.append(f"commission '{cell(cells, 'commission')}' is not a number")
         if not asset:
-            why.append(f"asset_type '{cell(cells, 'asset_type')}' is not STOCK, OPTION or FUTURE")
+            why.append(f"asset_type '{cell(cells, 'asset_type')}' is not STOCK, OPTION, FUTURE, CRYPTO, FOREX or GOLD")
 
         option_expiry = option_strike = option_type = None
         multiplier = 1
@@ -1420,15 +1437,27 @@ def parse_generic_rows(content):
                 multiplier = _num(override)
             except ValueError:
                 why.append(f"multiplier '{override}' is not a number")
+        if multiplier is not None and (not math.isfinite(multiplier) or multiplier <= 0):
+            why.append('multiplier must be a finite number above zero')
         if asset == 'FUTURE' and not multiplier:
             # Guessing 1 would understate a /ES trade fifty times over.
             why.append(f"no known point value for {ticker}; add a multiplier column (50 for /ES, for example)")
 
+        quote_currency = cell(cells, 'quote_currency').upper() or 'USD'
+        conversion = 1
+        rate = cell(cells, 'quote_to_usd_rate')
+        if quote_currency != 'USD' and not rate:
+            why.append('non-USD prices need quote_to_usd_rate; commissions must be in USD')
+        if rate:
+            try:
+                conversion = positive_number(_num(rate), 'USD conversion')
+            except ValueError:
+                why.append('quote_to_usd_rate must be a finite number above zero')
         if why:
             problems.append(f"line {n}: " + "; ".join(why))
             continue
 
-        amount = price * qty * multiplier
+        amount = price * qty * multiplier * conversion
         if action == 'BOT':
             amount = -amount
 
@@ -1438,6 +1467,9 @@ def parse_generic_rows(content):
             'ticker': ticker,
             'price': price,
             'instrument_type': asset,
+            'multiplier': multiplier,
+            'quote_currency': quote_currency,
+            'quote_to_usd_rate': conversion,
             'option_expiry': option_expiry,
             'option_strike': option_strike,
             'option_type': option_type,
@@ -1467,13 +1499,17 @@ def parse_generic_csv(content, account_id, conn=None):
 
 # ── Broker dispatch ────────────────────────────────────────────────────────────
 
+from exness_parser import parse_exness_csv, is_exness_csv
+
 BROKER_PARSERS = {
+    'exness': parse_exness_csv,
     'thinkorswim': parse_thinkorswim_csv,
     'ibkr': parse_ibkr_csv,
     'generic': parse_generic_csv,
 }
 
 BROKER_LABELS = {
+    'exness': 'Exness / MT5 closed positions',
     'thinkorswim': 'Thinkorswim',
     'ibkr': 'Interactive Brokers',
     'generic': 'the generic template',
@@ -1482,6 +1518,8 @@ BROKER_LABELS = {
 
 def detect_broker(content: str) -> str | None:
     """Sniff the CSV format. Returns a BROKER_PARSERS key or None if unrecognised."""
+    if is_exness_csv(content):
+        return 'exness'
     head = content.lstrip('﻿')[:4000]
     first_lines = [ln.strip() for ln in head.splitlines()[:5] if ln.strip()]
     if any(ln.startswith(('Statement,Header', 'Trades,Header', 'Account Information,Header'))
@@ -1515,7 +1553,7 @@ def parse_broker_csv(content: str, broker: str, account_id: int, conn=None) -> t
             raise ValueError(
                 "Could not recognise this CSV. Pick the broker from the dropdown, "
                 "export an account statement from Thinkorswim or an Activity "
-                "Statement from Interactive Brokers, or copy your fills into the "
+                "Statement from Interactive Brokers, an Exness closed-position CSV, or copy your fills into the "
                 "generic template (Import page, 'Broker not listed?')."
             )
         key = detected

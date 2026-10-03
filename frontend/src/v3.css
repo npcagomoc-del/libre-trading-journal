@@ -23,6 +23,7 @@
   --divider-strong: #2E3A4A;
 
   /* attention is amber, so it never argues with a result */
+  --brand-mint: #50E5BC;
   --action-primary: #F0A93B;
   --action-primary-text: #0A0E12;
   --accent-line: #F0A93B;
@@ -481,3 +482,5 @@ table.v3-t tbody tr.thin td { opacity: 0.6; }
   border-color: var(--divider); border-bottom-color: var(--accent-line);
   color: var(--text-primary);
 }
+
+@media (max-width: 1380px) { :root { --sticky-offset: 110px; } }

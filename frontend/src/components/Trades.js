@@ -160,6 +160,9 @@ export default function Trades({ accountId, initialDateFrom = '', initialDateTo 
             <option value="STOCK">Stock</option>
             <option value="OPTION">Option</option>
             <option value="FUTURE">Future</option>
+            <option value="CRYPTO">Crypto</option>
+            <option value="FOREX">Forex</option>
+            <option value="GOLD">Gold</option>
           </select>
         </div>
         <div>

@@ -1,4 +1,6 @@
-# Contributing to Trading Journal AI
+# Contributing to Libre Trading Journal
+
+Libre builds on [Trading-Journal-AI](https://github.com/simonro/Trading-Journal-AI) by Simon / simonro / Tape to Edge. Preserve the original MIT credit. Start with [developer setup](docs/DEVELOPER-GUIDE.md) and [AGENTS.md](AGENTS.md) for this version.
 
 Thanks for helping. Bug reports, broker samples, fixes and features are all welcome. This page
 covers how to set up, what to test, and what a pull request needs before it can be merged.
@@ -12,7 +14,7 @@ These decide most review questions, so they are worth knowing before you start:
 
 1. **Local first.** Everything runs on the user's machine against one SQLite file. No accounts, no
    telemetry, no cloud service. A change that sends data somewhere new, opens a network port beyond
-   `localhost`, or adds a background job needs to be discussed in an issue first.
+   `localhost`, or adds a background job needs to be discussed in an issue first. Optional AI sends requested coaching context to the selected provider; journal calculations remain local.
 2. **The numbers are deterministic.** Trade grouping, P&L, fees and statistics are plain code, never
    an LLM. Any change to how money is calculated needs a test with the expected figures worked out.
 3. **It refuses rather than guesses.** An importer that cannot read a row stops and says which line,
@@ -22,7 +24,7 @@ These decide most review questions, so they are worth knowing before you start:
 
 ## Setting up
 
-Requirements: Python 3.11+ and Node.js 18+ (CI uses Node 24).
+Requirements: Python 3.11+ and Node.js 24 with npm.
 
 On Windows, run `setup.bat` once and `launch.bat` to start. By hand:
 
@@ -37,8 +39,7 @@ The backend runs on http://localhost:8010 and the frontend on http://localhost:3
 
 A new install is always empty. For development only, `python scripts/seed_demo.py` fills a database
 with the synthetic demo data the screenshots use; never run it on a database you keep. **Never use or
-commit real trades**: not in tests, fixtures, screenshots or issues. Delete
-`backend/trading_journal.db` to go back to a clean install.
+commit real trades**: not in tests, fixtures, screenshots or issues. For a fresh development journal, use a separate disposable DATABASE_PATH and UPLOAD_DIR. Keep the real journal and its backups intact.
 
 ## Tests
 

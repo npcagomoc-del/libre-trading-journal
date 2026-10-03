@@ -110,8 +110,9 @@ function applyLayers(layers, visible) {
   }
 }
 
-export default function TradingChart({
+export default function TradingChart({ instrumentType = 'STOCK',
   ticker, date, defaultTimeframe = '5Min',
+  accountId, utcOffsetHours, tradeSource,
   executions = [], side = 'LONG', analysis = null,
   height = 320,
 }) {
@@ -119,6 +120,7 @@ export default function TradingChart({
   const chartRef = useRef(null);
   const [timeframe, setTimeframe] = useState(defaultTimeframe);
   const [bars, setBars] = useState([]);
+  const [chartInfo, setChartInfo] = useState({});
   const [daysBack, setDaysBack] = useState(() => INITIAL_DAYS_BACK[defaultTimeframe] || 1);
   const [warning, setWarning] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -145,9 +147,11 @@ export default function TradingChart({
   // fired the fetch once with the stale daysBack and again with the reset
   // value once it caught up.
   const selectionKeyRef = useRef(null);
+  const earliestDate = executions.reduce((first, fill) => fill.date && fill.date < first ? fill.date : first, date);
+  const tradeDays = Math.max(1, Math.ceil((new Date(date) - new Date(earliestDate)) / 86400000) + 1);
 
   useEffect(() => {
-    const key = `${ticker}|${date}|${timeframe}`;
+    const key = `${ticker}|${date}|${timeframe}|${instrumentType}|${accountId}|${utcOffsetHours}|${tradeDays}`;
     const isNewSelection = selectionKeyRef.current !== key;
 
     if (isNewSelection) {
@@ -155,7 +159,7 @@ export default function TradingChart({
       savedRangeRef.current = null;
       loadingMoreRef.current = false;
       isInitialFetchRef.current = true;
-      const initialDaysBack = INITIAL_DAYS_BACK[timeframe] || 1;
+      const initialDaysBack = Math.max(INITIAL_DAYS_BACK[timeframe] || 1, Math.min(tradeDays, MAX_DAYS_BACK[timeframe]));
       if (initialDaysBack !== daysBack) {
         // Resolve daysBack first and let the re-render (with settled state)
         // do the actual fetch, instead of fetching now with the stale value.
@@ -165,23 +169,27 @@ export default function TradingChart({
     }
 
     const isInitialLoad = isInitialFetchRef.current;
-    if (isInitialLoad) { setLoading(true); setBars([]); setWarning(null); }
-    chartApi.get(ticker, date, timeframe, daysBack)
-      .then(r => { setBars(r.data.bars || []); setWarning(r.data.warning || null); })
-      .catch(() => { if (isInitialLoad) setWarning('Failed to load chart data'); })
+    let cancelled = false;
+    if (isInitialLoad) { setLoading(true); setBars([]); setWarning(null); setChartInfo({}); }
+    chartApi.get(ticker, date, timeframe, daysBack, instrumentType, accountId, utcOffsetHours)
+      .then(r => { if (!cancelled) { setBars(r.data.bars || []); setWarning(r.data.warning || null); setChartInfo(r.data); } })
+      .catch(() => { if (!cancelled) setWarning('Failed to load chart data. Retry by selecting another timeframe.'); })
       .finally(() => {
+        if (cancelled) return;
         if (isInitialLoad) setLoading(false);
         isInitialFetchRef.current = false;
         loadingMoreRef.current = false;
       });
-  }, [ticker, date, timeframe, daysBack]);
+    return () => { cancelled = true; };
+  }, [ticker, date, timeframe, daysBack, instrumentType, accountId, utcOffsetHours, tradeDays]);
 
   useEffect(() => {
     if (loading || !bars.length || !containerRef.current) return;
 
     if (chartRef.current) { chartRef.current.remove(); chartRef.current = null; }
 
-    const barTs = isWide ? toDayTs : toTs;
+    const mt5 = chartInfo.provider === 'mt5';
+    const barTs = mt5 ? iso => toDayTs(iso) + (chartInfo.utc_offset_hours || 0) * 3600 : isWide ? toDayTs : toTs;
     const T = chartTheme();
     layersRef.current = { candles: null, vwap: [], markers: [], sl: null, target: null };
 
@@ -212,6 +220,7 @@ export default function TradingChart({
 
     // ── Candlestick series ────────────────────────────────────────────────
     const candleSeries = chart.addCandlestickSeries({
+      ...(mt5 ? { priceFormat: { type: 'price', precision: chartInfo.price_digits, minMove: 10 ** -chartInfo.price_digits } } : {}),
       upColor: T.up,
       downColor: T.down,
       borderUpColor: T.up,
@@ -233,7 +242,7 @@ export default function TradingChart({
     // A session VWAP is the running cumulative average from the open, so it's
     // built here as a running sum rather than plotted bar-by-bar. Only meaningful
     // within a single session, so skip it on the daily/weekly wide-context view.
-    if (!isWide) {
+    if (!isWide && !mt5) {
       // Restarts at 9:30 ET each day: bars are on the ET-shifted timeline, so the
       // UTC date and minutes read back out are ET. Pre-market and after-hours bars
       // get no VWAP. One line per session, so days are not joined to each other.
@@ -313,8 +322,8 @@ export default function TradingChart({
       const markers = executions
         .filter(f => f.time)
         .map(f => {
-          const ts = execToTs(date, f.time, bucketMin);
-          if (!ts) return null;
+          const ts = execToTs(f.date || date, f.time, bucketMin);
+          if (!ts || ts < candleData[0].time || ts > candleData[candleData.length - 1].time) return null;
           const isBuy = f.action === 'BOT';
           return {
             isBuy,
@@ -337,7 +346,7 @@ export default function TradingChart({
     if (savedRangeRef.current) {
       chart.timeScale().setVisibleRange(savedRangeRef.current);
       savedRangeRef.current = null;
-    } else if (SESSION_TFS.has(timeframe)) {
+    } else if (SESSION_TFS.has(timeframe) && !mt5) {
       // Open on the trade day's regular session. Falls back to the whole load
       // when the day has no bars inside 9:30-16:00.
       const bucketSec = (TF_MINUTES[timeframe] || 5) * 60;
@@ -387,7 +396,7 @@ export default function TradingChart({
       chart.remove();
       chartRef.current = null;
     };
-  }, [bars, executions, side, analysis, height, loading, date, timeframe, isWide, daysBack]);
+  }, [bars, executions, side, analysis, height, loading, date, timeframe, isWide, daysBack, chartInfo]);
 
   useEffect(() => {
     visibleRef.current = visible;
@@ -398,7 +407,7 @@ export default function TradingChart({
   const legendItems = [
     { key: 'buy', label: 'Buy fill', swatch: { width: 9, height: 9, borderRadius: '50%', background: 'var(--result-pos)' } },
     { key: 'sell', label: 'Sell fill', swatch: { width: 9, height: 9, borderRadius: '50%', background: 'var(--result-neg)' } },
-    !isWide && { key: 'vwap', label: 'VWAP', swatch: { width: 16, height: 2, background: 'var(--text-secondary)' } },
+    !isWide && chartInfo.provider !== 'mt5' && { key: 'vwap', label: 'VWAP', swatch: { width: 16, height: 2, background: 'var(--text-secondary)' } },
     analysis?.stop_loss && { key: 'sl', label: 'SL', swatch: { width: 16, height: 2, background: 'var(--caution)' } },
     analysis?.target_price && { key: 'target', label: 'Target', swatch: { width: 16, height: 2, background: 'var(--accent-line)' } },
   ].filter(Boolean);
@@ -427,6 +436,11 @@ export default function TradingChart({
         </div>
       </div>
 
+      {chartInfo.provider === 'mt5' && chartInfo.feed_broker && <p className="text-muted" style={{ fontSize: 12, marginBottom: 8 }}>
+        {chartInfo.feed_broker.toUpperCase()} · {chartInfo.resolved_symbol} · trade clock UTC{chartInfo.utc_offset_hours >= 0 ? '+' : ''}{chartInfo.utc_offset_hours} · tick volume
+        {chartInfo.transport === 'mcp' && ` · MCP · server clock UTC${chartInfo.server_utc_offset_hours >= 0 ? '+' : ''}${chartInfo.server_utc_offset_hours}`}
+        {tradeSource === 'exness' && chartInfo.feed_broker !== 'exness' && ' · Reference prices may differ from your Exness fills.'}
+      </p>}
       {loading ? (
         <div className="skeleton" style={{ height, borderRadius: 8 }} />
       ) : warning && !bars.length ? (

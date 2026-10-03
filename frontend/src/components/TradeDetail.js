@@ -38,18 +38,21 @@ function computeStats(trade) {
   const avgEntry = avgPrice(entryFills);
   const avgExit  = avgPrice(exitFills);
   const totalQty = entryFills.reduce((s, f) => s + (f.qty || 0), 0);
-  const adjustedCost = avgEntry ? avgEntry * totalQty : null;
+  const adjustedCost = avgEntry ? entryFills.reduce((sum, fill) => sum +
+    fill.price * fill.qty * (fill.multiplier || 1) * (fill.quote_to_usd_rate || 1), 0) : null;
   const netRoi = adjustedCost ? (trade.net_pnl / adjustedCost * 100) : null;
 
-  const sortedTimes = [...execs].map(e => e.time).filter(Boolean).sort();
-  const openTime  = sortedTimes[0];
-  const closeTime = sortedTimes[sortedTimes.length - 1];
+  const chronological = [...execs].filter(e => e.time).sort((a, b) =>
+    `${a.date || trade.date}T${a.time}`.localeCompare(`${b.date || trade.date}T${b.time}`));
+  const firstFill = chronological[0];
+  const lastFill = chronological[chronological.length - 1];
+  const openTime = firstFill?.time;
+  const closeTime = lastFill?.time;
 
   let holdMinutes = null;
   if (openTime && closeTime && exitFills.length > 0) {
-    const [oh, om] = openTime.split(':').map(Number);
-    const [ch, cm] = closeTime.split(':').map(Number);
-    holdMinutes = (ch * 60 + cm) - (oh * 60 + om);
+    holdMinutes = Math.round((new Date(`${lastFill.date || trade.date}T${closeTime}`) -
+      new Date(`${firstFill.date || trade.date}T${openTime}`)) / 60000);
   }
 
   const fmtHold = (m) => {
@@ -361,6 +364,7 @@ export default function TradeDetail({ trade: initialTrade, tradeNavList = [], on
       const res = await tradesApi.addExecution(trade.id, {
         ...execForm,
         qty: Number(execForm.qty),
+        quote_to_usd_rate: Number(execForm.quote_to_usd_rate || contract.quote_to_usd_rate || 1),
         price: Number(execForm.price),
         commission: Number(execForm.commission || 0),
         date: execForm.date || trade.date,
@@ -479,23 +483,26 @@ export default function TradeDetail({ trade: initialTrade, tradeNavList = [], on
   // ── Computed values ───────────────────────────────────────────────────────
 
   const stats = computeStats(trade);
+  const contract = parseExecs(trade)[0] || {};
+  const quoteCurrency = contract.quote_currency || 'USD';
+  const priceLabel = value => `${quoteCurrency === 'USD' ? '$' : quoteCurrency + ' '}${Number(value).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 8 })}`;
 
   useEffect(() => {
     if (whatIfBars !== null) return;
-    if (!stats.isClosed) { setWhatIfBars([]); return; }
+    if (!stats.isClosed || ['CRYPTO', 'FOREX', 'GOLD'].includes(trade.instrument_type)) { setWhatIfBars([]); return; }
     setWhatIfLoading(true);
     chartApi.get(trade.ticker, trade.date, '1Min')
       .then(r => setWhatIfBars(r.data.bars || []))
       .catch(() => setWhatIfBars([]))
       .finally(() => setWhatIfLoading(false));
-  }, [whatIfBars, trade.ticker, trade.date, stats.isClosed]);
+  }, [whatIfBars, trade.ticker, trade.date, stats.isClosed, trade.instrument_type]);
 
   const pnl = trade.net_pnl ?? 0;
 
   const riskPerShare = analysis?.stop_loss && stats.avgEntry
     ? Math.abs(stats.avgEntry - analysis.stop_loss) : null;
   const tradeRisk = riskPerShare && stats.totalQty
-    ? -(riskPerShare * stats.totalQty) : analysis?.risk_per_trade ? -Math.abs(analysis.risk_per_trade) : null;
+    ? -(riskPerShare * stats.totalQty * (contract.multiplier || 1) * (contract.quote_to_usd_rate || 1)) : analysis?.risk_per_trade ? -Math.abs(analysis.risk_per_trade) : null;
   const plannedR  = analysis?.risk_reward ? `${Number(analysis.risk_reward).toFixed(2)}R` : null;
   const realizedR = analysis?.r_multiple != null ? `${Number(analysis.r_multiple).toFixed(2)}R` : null;
 
@@ -581,8 +588,8 @@ export default function TradeDetail({ trade: initialTrade, tradeNavList = [], on
           tone={analysis?.r_multiple != null ? (analysis.r_multiple >= 0 ? 'pos' : 'neg') : undefined}
           foot={plannedR ? <>Planned <span className="num">{plannedR}</span></> : null}
         />
-        <KpiCell label="Avg entry" value={<span className="num">{stats.avgEntry ? `$${stats.avgEntry.toFixed(2)}` : 'n/a'}</span>} />
-        <KpiCell label="Avg exit" value={<span className="num">{stats.avgExit ? `$${stats.avgExit.toFixed(2)}` : 'n/a'}</span>} />
+        <KpiCell label="Avg entry" value={<span className="num">{stats.avgEntry ? priceLabel(stats.avgEntry) : 'n/a'}</span>} />
+        <KpiCell label="Avg exit" value={<span className="num">{stats.avgExit ? priceLabel(stats.avgExit) : 'n/a'}</span>} />
         <KpiCell label="Quantity" value={<span className="num">{stats.totalQty || 'n/a'}</span>} foot={trade.commissions ? <>Comm <span className="num">{fmt$(trade.commissions)}</span></> : null} />
         <KpiCell label="Risk" value={<span className="num">{tradeRisk ? fmt$(tradeRisk) : 'n/a'}</span>} />
       </KpiStrip>
@@ -597,6 +604,10 @@ export default function TradeDetail({ trade: initialTrade, tradeNavList = [], on
           <section className="card">
             <TradingChart
               ticker={trade.ticker}
+              instrumentType={trade.instrument_type}
+              accountId={trade.account_id}
+              utcOffsetHours={trade.source === 'exness' ? 0 : undefined}
+              tradeSource={trade.source}
               date={trade.date}
               executions={parseExecs(trade)}
               side={trade.side}
@@ -664,13 +675,15 @@ export default function TradeDetail({ trade: initialTrade, tradeNavList = [], on
                 </div>
 
                 <StatRow label="Side" value={trade.side} />
-                <StatRow label="Stocks traded" value={stats.totalQty || '—'} />
+                <StatRow label="Quantity traded" value={stats.totalQty || '—'} />
                 <StatRow label="Commissions & Fees" value={trade.commissions ? fmt$(trade.commissions) : '—'} />
+                {trade.source === 'exness' && <StatRow label="Swap" value={fmt$(trade.swaps || 0)} />}
+                {trade.source === 'exness' && <StatRow label="Exness ticket" value={contract.ticket} />}
                 <StatRow label="Net ROI" value={stats.netRoi != null ? `${stats.netRoi >= 0 ? '+' : ''}${stats.netRoi.toFixed(2)}%` : '—'} valueColor={stats.netRoi != null ? (stats.netRoi >= 0 ? 'var(--green)' : 'var(--red)') : undefined} />
                 <StatRow label="Gross P&L" value={trade.gross_pnl != null ? fmt$(trade.gross_pnl) : '—'} valueColor={trade.gross_pnl >= 0 ? 'var(--green)' : 'var(--red)'} />
                 <StatRow label="Adjusted Cost" value={stats.adjustedCost ? fmt$(stats.adjustedCost) : '—'} />
-                <StatRow label="Average Entry" value={stats.avgEntry ? `$${stats.avgEntry.toFixed(2)}` : '—'} />
-                <StatRow label="Average Exit" value={stats.avgExit ? `$${stats.avgExit.toFixed(2)}` : '—'} />
+                <StatRow label="Average Entry" value={stats.avgEntry ? priceLabel(stats.avgEntry) : '—'} />
+                <StatRow label="Average Exit" value={stats.avgExit ? priceLabel(stats.avgExit) : '—'} />
                 <StatRow label="Entry Time" value={stats.openTime?.slice(0, 5) || '—'} />
                 <StatRow label="Exit Time" value={(stats.isClosed && stats.closeTime?.slice(0, 5)) || '—'} />
                 <StatRow label="Hold Time" value={stats.fmtHold(stats.holdMinutes)} />
@@ -844,6 +857,7 @@ export default function TradeDetail({ trade: initialTrade, tradeNavList = [], on
             {/* ── Executions tab ────────────────────────────────────────── */}
             {tab === 'Executions' && (
               <div style={{ paddingTop: 8 }}>
+                {trade.source === 'exness' && <div className="notice" style={{ marginBottom: 12 }}>Broker-reported profit is preserved. Dates, times and USD fees can be edited here. To change prices or lots, update the Exness CSV and reimport the ticket.</div>}
                 {/* The card wrapping this panel clips overflow with no scrollbar, so the
                     edit/delete column silently disappeared off the right edge on any
                     trade with enough columns to not fit the fixed-width side panel. An
@@ -866,7 +880,7 @@ export default function TradeDetail({ trade: initialTrade, tradeNavList = [], on
                         <td className="mono" style={{ fontSize: 13.5, whiteSpace: 'nowrap' }}>{ex.time?.slice(0, 5) || '—'}</td>
                         <td style={{ whiteSpace: 'nowrap' }}>{ex.action}</td>
                         <td className="num mono" style={{ fontSize: 13.5 }}>{ex.qty}</td>
-                        <td className="num mono" style={{ fontSize: 13.5 }}>${Number(ex.price ?? 0).toFixed(2)}</td>
+                        <td className="num mono" style={{ fontSize: 13.5 }}>{priceLabel(ex.price ?? 0)}</td>
                         <td className="num mono text-muted" style={{ fontSize: 13.5 }}>{ex.commission ? `$${Number(ex.commission).toFixed(2)}` : '—'}</td>
                         <td className="num" style={{ whiteSpace: 'nowrap', paddingRight: 20 }}>
                           <button
@@ -911,15 +925,21 @@ export default function TradeDetail({ trade: initialTrade, tradeNavList = [], on
                       </div>
                       <div>
                         <div className="field-label" style={{ marginBottom: 4 }}>Qty</div>
-                        <input aria-label="Edit execution qty" type="number" min="1" value={editExecForm.qty} onChange={e => setEditExecForm(f => ({ ...f, qty: e.target.value }))} style={inputStyle} />
+                        <input aria-label="Edit execution qty" type="number" min="0.000000000001" step="any" value={editExecForm.qty} onChange={e => setEditExecForm(f => ({ ...f, qty: e.target.value }))} style={inputStyle} />
                       </div>
                       <div>
                         <div className="field-label" style={{ marginBottom: 4 }}>Price</div>
-                        <input aria-label="Edit execution price" type="number" min="0" step="0.01" value={editExecForm.price} onChange={e => setEditExecForm(f => ({ ...f, price: e.target.value }))} style={inputStyle} />
+                        <input aria-label="Edit execution price" type="number" min="0" step="any" value={editExecForm.price} onChange={e => setEditExecForm(f => ({ ...f, price: e.target.value }))} style={inputStyle} />
                       </div>
+                      {quoteCurrency !== 'USD' && <div>
+                        <div className="field-label">USD per 1 {quoteCurrency}</div>
+                        <input aria-label="Edit execution USD conversion" type="number" min="0.000000000001" step="any"
+                          value={editExecForm.quote_to_usd_rate ?? contract.quote_to_usd_rate ?? 1}
+                          onChange={e => setEditExecForm(f => ({ ...f, quote_to_usd_rate: e.target.value }))} style={inputStyle} />
+                      </div>}
                       <div>
                         <div className="field-label" style={{ marginBottom: 4 }}>Commission</div>
-                        <input aria-label="Edit execution commission" type="number" min="0" step="0.01" value={editExecForm.commission} onChange={e => setEditExecForm(f => ({ ...f, commission: e.target.value }))} style={inputStyle} />
+                        <input aria-label="Edit execution commission" type="number" min="0" step="any" value={editExecForm.commission} onChange={e => setEditExecForm(f => ({ ...f, commission: e.target.value }))} style={inputStyle} />
                       </div>
                       <div>
                         <div className="field-label" style={{ marginBottom: 4 }}>Date</div>
@@ -961,15 +981,21 @@ export default function TradeDetail({ trade: initialTrade, tradeNavList = [], on
                       </div>
                       <div>
                         <div className="field-label" style={{ marginBottom: 4 }}>Qty</div>
-                        <input aria-label="New execution qty" type="number" min="1" value={execForm.qty} placeholder="0" onChange={e => setExecForm(f => ({ ...f, qty: e.target.value }))} style={inputStyle} />
+                        <input aria-label="New execution qty" type="number" min="0.000000000001" step="any" value={execForm.qty} placeholder="0" onChange={e => setExecForm(f => ({ ...f, qty: e.target.value }))} style={inputStyle} />
                       </div>
                       <div>
                         <div className="field-label" style={{ marginBottom: 4 }}>Price</div>
-                        <input aria-label="New execution price" type="number" min="0" step="0.01" value={execForm.price} onChange={e => setExecForm(f => ({ ...f, price: e.target.value }))} style={inputStyle} />
+                        <input aria-label="New execution price" type="number" min="0" step="any" value={execForm.price} onChange={e => setExecForm(f => ({ ...f, price: e.target.value }))} style={inputStyle} />
                       </div>
+                      {quoteCurrency !== 'USD' && <div>
+                        <div className="field-label">USD per 1 {quoteCurrency}</div>
+                        <input aria-label="New execution USD conversion" type="number" min="0.000000000001" step="any"
+                          value={execForm.quote_to_usd_rate ?? contract.quote_to_usd_rate ?? 1}
+                          onChange={e => setExecForm(f => ({ ...f, quote_to_usd_rate: e.target.value }))} style={inputStyle} />
+                      </div>}
                       <div>
                         <div className="field-label" style={{ marginBottom: 4 }}>Commission</div>
-                        <input aria-label="New execution commission" type="number" min="0" step="0.01" value={execForm.commission} onChange={e => setExecForm(f => ({ ...f, commission: e.target.value }))} style={inputStyle} />
+                        <input aria-label="New execution commission" type="number" min="0" step="any" value={execForm.commission} onChange={e => setExecForm(f => ({ ...f, commission: e.target.value }))} style={inputStyle} />
                       </div>
                       <div>
                         <div className="field-label" style={{ marginBottom: 4 }}>Date</div>

@@ -9,6 +9,7 @@ const BROKERS = [
   { value: 'auto', label: 'Auto-detect' },
   { value: 'thinkorswim', label: 'Thinkorswim (Schwab)' },
   { value: 'ibkr', label: 'Interactive Brokers (IBKR)' },
+  { value: 'exness', label: 'Exness / MT5 (Forex & Gold)' },
   { value: 'generic', label: 'Other broker (generic template)' },
 ];
 
@@ -17,22 +18,25 @@ const TEMPLATE_URL = '/templates/generic_trades_template.csv';
 const EXAMPLE_URL = '/templates/generic_trades_example.csv';
 
 const BROKER_HELP = {
-  auto: 'Pick a broker above, or leave Auto-detect and the importer will recognise a Thinkorswim account statement or an IBKR Activity Statement.',
+  auto: 'Auto-detect recognises Thinkorswim, IBKR, Exness closed-position CSVs, and the generic template.',
   thinkorswim: <>Export from Thinkorswim desktop: <em>Monitor → Account Statement → export icon → Export to File (CSV)</em></>,
   ibkr: <>Export from IBKR Client Portal: <em>Performance &amp; Reports → Statements → Activity → pick the period → Download as CSV</em></>,
+  exness: <>Use a closed-position CSV from Exness history, or copy MT5 History → Positions into the template below. One row per closed ticket, with both opening and closing times/prices. MT5 HTML reports and individual Deals are not accepted by this CSV importer.</>,
   generic: <>Copy your fills into the template, one row per execution. Buys and sells of the same symbol are grouped into round-trip trades automatically, the same way as a broker import.</>,
 };
 
 const BROKER_DROP_LABEL = {
-  auto: 'Drop your broker CSV (Thinkorswim or IBKR)',
+  auto: 'Drop your broker CSV (Thinkorswim, IBKR or Exness)',
   thinkorswim: 'Drop Thinkorswim account statement CSV',
   ibkr: 'Drop IBKR Activity Statement CSV',
+  exness: 'Drop your Exness / MT5 closed-position CSV',
   generic: 'Drop your filled-in generic template CSV',
 };
 
 // Map the free-text broker stored on an account to a dropdown value.
 function brokerFromAccount(account) {
   const b = (account?.broker || '').toLowerCase();
+  if (/exness|mt5|metatrader/.test(b)) return 'exness';
   if (/ibkr|interactive/.test(b)) return 'ibkr';
   if (/thinkorswim|tos|schwab/.test(b)) return 'thinkorswim';
   return 'auto';
@@ -46,12 +50,14 @@ const TEMPLATE_COLUMNS = [
   ['time', 'Required', '24 hour HH:MM or HH:MM:SS, or 1:05 PM'],
   ['symbol', 'Required', 'AAPL. Futures start with a slash: /MESU26'],
   ['side', 'Required', 'BUY or SELL. BUY TO COVER and SELL SHORT work too'],
-  ['quantity', 'Required', 'Shares or contracts, always positive'],
+  ['quantity', 'Required', 'Positive shares, coins, forex units, ounces or broker lots; fractions allowed'],
   ['price', 'Required', 'Fill price per share or per contract'],
   ['commission', 'Optional', 'Fees for that fill. Blank means 0'],
-  ['asset_type', 'Optional', 'STOCK (default), OPTION or FUTURE'],
+  ['asset_type', 'Optional', 'STOCK (default), OPTION, FUTURE, CRYPTO, FOREX or GOLD'],
   ['expiry, strike, put_call', 'Options', '2026-08-28, 765, CALL or PUT'],
-  ['multiplier', 'Optional', 'Point value for a future the app does not know'],
+  ['multiplier', 'Optional', 'Contract size or point value; default 1 for coins, forex units and gold ounces'],
+  ['quote_currency', 'Optional', 'Price quote currency; defaults to USD'],
+  ['quote_to_usd_rate', 'Non-USD quotes', 'USD value of 1 quote-currency unit; commissions must already be USD'],
 ];
 
 function GenericTemplateTip({ open, onUse }) {
@@ -215,7 +221,7 @@ export default function Import({ accounts, accountId }) {
         setDiaryError('Diary saved, but AI analysis failed: ' + res.data.analysis_error);
       }
     } catch (e) {
-      setDiaryError(e.response?.data?.error || e.message);
+      setDiaryError(e.response?.data?.detail || e.response?.data?.error || e.message);
     } finally {
       setAnalyzing(false);
     }
@@ -223,7 +229,7 @@ export default function Import({ accounts, accountId }) {
 
   return (
     <div>
-      <PageHeader title="Import" subtitle="Bring in your broker executions, or have Claude read a trading diary." />
+      <PageHeader title="Import" subtitle="Bring in your broker executions, or have your selected AI model read a trading diary." />
 
       <div className="grid-2">
 
@@ -312,7 +318,16 @@ export default function Import({ accounts, accountId }) {
             {BROKER_HELP[csvBroker]}
           </div>
 
-          <GenericTemplateTip open={csvBroker === 'generic'} onUse={() => setCsvBroker('generic')} />
+          {csvBroker === 'exness' && <div className="notice" style={{ marginTop: 16, display: 'block', lineHeight: 1.6 }}>
+            <strong>Forex &amp; Gold position template</strong>
+            <div><a href="/templates/exness_positions_template.csv" download>Download blank template</a>
+              {' · '}<a href="/templates/exness_positions_example.csv" download>Download example</a></div>
+            <div style={{ marginTop: 8 }}>Use fractional <strong>lots</strong>, e.g. 0.03. XAUUSD defaults to 100 ounces per lot; forex defaults to 100,000 base units. Enter a different contract_size if your symbol specifications differ.</div>
+            <div>Profit is the broker's gross result. Commission is a <strong>negative charge</strong>, swap keeps its sign, and net P&amp;L = profit + commission + swap (minus any fee). Blank charges mean zero.</div>
+            <div>Money defaults to USD. For another account currency, enter account_currency and account_to_usd_rate. Cent accounts must first be converted to USD/EUR amounts.</div>
+            <div>Keep broker timestamps as shown; the app uses the closing date for reports. Use YYYY-MM-DD HH:MM:SS or MT5's YYYY.MM.DD HH:MM:SS. Matching tickets are skipped on repeat imports. Conflicting duplicate tickets, including partial-close rows with the same ticket, are rejected.</div>
+          </div>}
+          {csvBroker !== 'exness' && <GenericTemplateTip open={csvBroker === 'generic'} onUse={() => setCsvBroker('generic')} />}
         </section>
 
         {/* Diary Upload */}
@@ -381,14 +396,14 @@ export default function Import({ accounts, accountId }) {
             disabled={analyzing || !diaryFile || !diaryAccountId || !diaryDate}
           >
             {analyzing
-              ? <><span className="spinner" style={{ width: 16, height: 16 }} /> Analyzing with Claude AI...</>
+              ? <><span className="spinner" style={{ width: 16, height: 16 }} /> Analyzing diary...</>
               : <><Upload size={16} /> Analyze Diary</>
             }
           </button>
 
           {analyzing && (
             <div role="status" style={{ marginTop: 10, fontSize: 13, color: 'var(--text-secondary)', textAlign: 'center' }}>
-              Claude is reading your diary. This takes 10 to 20 seconds...
+              Your selected AI model is reading your diary. Completion time depends on the model and request.
             </div>
           )}
 
@@ -411,7 +426,7 @@ export default function Import({ accounts, accountId }) {
           )}
 
           <div style={{ marginTop: 16, fontSize: 13, color: 'var(--text-secondary)' }}>
-            Claude AI will read your handwritten or typed notes and extract strategy, stops, R-multiples, emotional state, and more.
+            Your selected AI model will read your notes and extract strategy, stops, R-multiples, emotional state, and more. Screenshots require a model with image support.
           </div>
         </section>
       </div>

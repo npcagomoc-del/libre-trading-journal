@@ -58,7 +58,7 @@ export default function Strategies({ accountId }) {
     winRate: val.count ? Math.round(val.wins / val.count * 100) : 0,
   }));
 
-  const INST_COLORS = { STOCK: '#5bb0d7', OPTION: '#e8a95c', FUTURE: '#6bc987' };
+  const INST_COLORS = { STOCK: '#5bb0d7', OPTION: '#e8a95c', FUTURE: '#6bc987', CRYPTO: '#b397ef', FOREX: '#50E5BC', GOLD: '#F0A93B' };
 
   return (
     <div>
@@ -189,7 +189,7 @@ export default function Strategies({ accountId }) {
           </pre>
         ) : (
           <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>
-            Click "Generate Insights" to get personalized coaching feedback from Claude AI based on your trading data.
+            Click "Generate Insights" to get personalized coaching feedback from ChatGPT based on your trading data.
           </div>
         )}
       </div>

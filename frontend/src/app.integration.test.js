@@ -57,6 +57,10 @@ jest.mock('./api', () => {
   return {
     __restoreMocks: () => all.forEach(f => f.mockImplementation(f.impl)),
     API_BASE: 'http://mocked.invalid',
+    aiApi: withDefault({ status: fn(() => ok({ connected: false, plan_usage_enabled: false, registrations: [] })) }),
+    aiProvidersApi: withDefault({ list: fn(() => ok({ active_provider: 'chatgpt', providers: [{ id: 'chatgpt', configured: false, model: '' }] })) }),
+    backupsApi: withDefault({ recovery: fn(() => ok({ backups: [] })) }),
+    marketDataApi: withDefault({ status: fn(() => ok({ config: null, installations: [] })) }),
     accountsApi: withDefault({
       list: fn(() => ok(ACCOUNTS)),
       create: fn(() => ok({ id: 3 })),
@@ -113,9 +117,13 @@ const nav = () => screen.getByRole('navigation', { name: 'Main' });
 
 test('header keeps every page, Settings, Import, Add Trade and a labeled Brain entry visible', async () => {
   await renderApp();
-  for (const label of ['Dashboard', 'Trade View', 'Calendar', 'Day Review', 'Reports', 'Diary', 'Help', 'Settings']) {
+  for (const label of ['Dashboard', 'Trade View', 'Calendar', 'Day Review', 'Reports', 'Diary']) {
     expect(within(nav()).getByRole('button', { name: label })).toBeVisible();
   }
+  fireEvent.click(screen.getByRole('button', { name: 'More' }));
+  expect(screen.getByRole('menuitem', { name: 'Settings' })).toBeVisible();
+  expect(screen.getByRole('menuitem', { name: 'Help' })).toBeVisible();
+  fireEvent.keyDown(document, { key: 'Escape' });
   const banner = screen.getByRole('banner');
   expect(within(banner).getByRole('button', { name: /^Import$/ })).toBeVisible();
   expect(within(banner).getByRole('button', { name: /Add Trade/ })).toBeVisible();
@@ -215,7 +223,8 @@ test('Import keeps broker CSV import and diary analysis, with keyboard dropzones
 
 test('Help lists the metric reference and the feature guide', async () => {
   await renderApp();
-  fireEvent.click(within(nav()).getByRole('button', { name: 'Help' }));
+  fireEvent.click(screen.getByRole('button', { name: 'More' }));
+  fireEvent.click(screen.getByRole('menuitem', { name: 'Help' }));
   expect(await screen.findByRole('heading', { name: 'Help and Reference' })).toBeInTheDocument();
   expect(screen.getByRole('heading', { name: 'Dashboard KPIs' })).toBeInTheDocument();
   expect(screen.getByRole('heading', { name: 'Features' })).toBeInTheDocument();
@@ -249,7 +258,8 @@ test('Day Review keeps the loss-streak alert and its Dismiss control', async () 
 
 test('Settings has Strategies, Sources and Tags sections, and Tags leaves out strategy and source types', async () => {
   await renderApp();
-  fireEvent.click(within(nav()).getByRole('button', { name: 'Settings' }));
+  fireEvent.click(screen.getByRole('button', { name: 'More' }));
+  fireEvent.click(screen.getByRole('menuitem', { name: 'Settings' }));
   const tablist = await screen.findByRole('tablist', { name: 'Settings sections' });
   expect(within(tablist).getAllByRole('tab').map(t => t.textContent.replace(/\d+/g, '').trim()))
     .toEqual(['Strategies', 'Sources', 'Tags']);
@@ -266,7 +276,8 @@ test('Settings has Strategies, Sources and Tags sections, and Tags leaves out st
 
 test('Settings merges one strategy into another', async () => {
   await renderApp();
-  fireEvent.click(within(nav()).getByRole('button', { name: 'Settings' }));
+  fireEvent.click(screen.getByRole('button', { name: 'More' }));
+  fireEvent.click(screen.getByRole('menuitem', { name: 'Settings' }));
   fireEvent.click(await screen.findByRole('button', { name: 'Merge Continuation RS into another strategy' }));
   fireEvent.change(screen.getByRole('combobox', { name: /Merge "Continuation RS" into/ }), { target: { value: 'VWAP Cross' } });
   fireEvent.click(screen.getByRole('button', { name: 'Merge' }));
@@ -278,7 +289,8 @@ test('Settings merges one strategy into another', async () => {
 
 test('Settings delete asks to reassign and can leave trades blank', async () => {
   await renderApp();
-  fireEvent.click(within(nav()).getByRole('button', { name: 'Settings' }));
+  fireEvent.click(screen.getByRole('button', { name: 'More' }));
+  fireEvent.click(screen.getByRole('menuitem', { name: 'Settings' }));
   fireEvent.click(await screen.findByRole('tab', { name: /Sources/ }));
   fireEvent.click(await screen.findByRole('button', { name: 'Delete OneOption' }));
   expect(screen.getByRole('combobox', { name: /1 trade use "OneOption". Reassign them to/ })).toHaveValue('');

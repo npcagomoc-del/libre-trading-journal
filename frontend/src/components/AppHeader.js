@@ -1,10 +1,11 @@
 import { useState, useRef, useEffect } from 'react';
 import {
   LayoutDashboard, TrendingUp, BarChart2, BookOpen, Plus, ChevronDown,
-  CalendarDays, Check, X, Pencil, CalendarCheck, HelpCircle, Upload, Brain, Settings as SettingsIcon,
+  CalendarDays, Check, X, Pencil, CalendarCheck, HelpCircle, Upload, Brain, Settings as SettingsIcon, MoreHorizontal,
 } from 'lucide-react';
 import { accountsApi } from '../api';
-import aiJournalLogo from '../assets/ai-journal-logo.png';
+import aiJournalLogo from '../assets/happy-bull.png';
+import './journal-settings.css';
 
 // Every page stays one click away. Import, Brain and Add Trade live with the
 // account selector on the right, the rest are the labeled navigation.
@@ -15,9 +16,36 @@ const NAV_ITEMS = [
   { id: 'day-review', label: 'Day Review', icon: CalendarCheck },
   { id: 'reports', label: 'Reports', icon: BarChart2 },
   { id: 'diary', label: 'Diary', icon: BookOpen },
-  { id: 'help', label: 'Help', icon: HelpCircle },
-  { id: 'settings', label: 'Settings', icon: SettingsIcon },
 ];
+
+function MoreMenu({ page, onNavigate }) {
+  const [open, setOpen] = useState(false);
+  const root = useRef(null);
+  const trigger = useRef(null);
+  useEffect(() => {
+    if (!open) return;
+    const outside = e => { if (!root.current?.contains(e.target)) setOpen(false); };
+    const escape = e => { if (e.key === 'Escape') { setOpen(false); trigger.current?.focus(); } };
+    document.addEventListener('mousedown', outside);
+    document.addEventListener('keydown', escape);
+    return () => { document.removeEventListener('mousedown', outside); document.removeEventListener('keydown', escape); };
+  }, [open]);
+  const active = ['settings', 'help'].includes(page);
+  return <div className="header-more" ref={root}>
+    <button type="button" ref={trigger} className={`btn btn-ghost${active ? ' active' : ''}`}
+      aria-label="More" aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen(v => !v)}>
+      <MoreHorizontal size={18} aria-hidden="true" /><span>More</span>
+    </button>
+    {open && <div className="header-more-menu" role="menu" aria-label="More pages">
+      {[{ id: 'settings', label: 'Settings', icon: SettingsIcon }, { id: 'help', label: 'Help', icon: HelpCircle }].map(({ id, label, icon: Icon }, i) =>
+        <button type="button" key={id} role="menuitem" autoFocus={i === 0}
+          aria-current={page === id ? 'page' : undefined} className={`dropdown-item${page === id ? ' selected' : ''}`}
+          onClick={() => { onNavigate(id); setOpen(false); trigger.current?.focus(); }}>
+          <Icon size={16} aria-hidden="true" />{label}
+        </button>)}
+    </div>}
+  </div>;
+}
 
 const NEW_ACCOUNT_DEFAULT = { name: '', type: 'day_trading', color: '#6366f1', broker: 'Thinkorswim' };
 
@@ -232,8 +260,9 @@ export default function AppHeader({
   return (
     <header className="app-header">
       <div className="app-header-inner">
-        <button type="button" className="app-brand" onClick={() => onNavigate('dashboard')} aria-label="AI Journal, go to Dashboard">
-          <img src={aiJournalLogo} alt="AI Journal" />
+        <button type="button" className="app-brand" onClick={() => onNavigate('dashboard')} aria-label="Libre Trading Journal, go to Dashboard">
+          <img src={aiJournalLogo} alt="" />
+          <span className="app-wordmark libre-wordmark">Libre<span>Trading Journal</span></span>
         </button>
 
         <nav className="app-nav" aria-label="Main">
@@ -258,8 +287,9 @@ export default function AppHeader({
             onClick={onToggleBrain}
             aria-pressed={brainOpen}
             title="Brain, your AI trading coach"
+            aria-label="Brain"
           >
-            <Brain size={16} aria-hidden="true" /> Brain
+            <Brain size={16} aria-hidden="true" /> <span className="header-action-label">Brain</span>
           </button>
           <AccountMenu
             accounts={accounts}
@@ -272,9 +302,11 @@ export default function AppHeader({
             className={`btn btn-ghost${page === 'import' ? ' active' : ''}`}
             onClick={() => onNavigate('import')}
             aria-current={page === 'import' ? 'page' : undefined}
+            aria-label="Import"
           >
-            <Upload size={16} aria-hidden="true" /> Import
+            <Upload size={16} aria-hidden="true" /> <span className="header-action-label">Import</span>
           </button>
+          <MoreMenu page={page} onNavigate={onNavigate} />
           <button type="button" className="btn btn-primary" onClick={onAddTrade}>
             <Plus size={16} aria-hidden="true" /> Add Trade
           </button>

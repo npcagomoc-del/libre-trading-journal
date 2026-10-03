@@ -1,8 +1,8 @@
 import json
 import re
-from ai_analysis import get_client, response_text
+from ai_analysis import response_text
+from ai_provider import generate_text
 
-MODEL = "claude-opus-5"
 
 DAILY_SUMMARY_PROMPT = """You are a professional trading coach producing an end-of-day performance review for a day trader.
 
@@ -132,8 +132,7 @@ def build_daily_context(conn, date: str, account_id) -> dict:
 
 
 def generate_daily_summary(context: dict) -> dict:
-    """Call Claude to generate a structured daily summary."""
-    client = get_client()
+    """Call ChatGPT to generate a structured daily summary."""
 
     date = context["date"]
     trades = context["trades"]
@@ -187,9 +186,7 @@ Trades:
 
 Generate the daily coaching summary JSON."""
 
-    response = client.messages.create(
-        model=MODEL,
-        max_tokens=4096,
+    response = generate_text(
         system=DAILY_SUMMARY_PROMPT,
         messages=[{"role": "user", "content": user_content}],
     )

@@ -1,6 +1,9 @@
 # secrets
 .env
 backend/.env
+.env.*
+!.env.example
+!**/.env.example
 
 # databases
 *.db
@@ -8,12 +11,26 @@ backend/.env
 *.db-shm
 *.bak
 *.bak-*
+*.sqlite
+*.sqlite3
+*.sqlite-wal
+*.sqlite-shm
+*.sqlite3-wal
+*.sqlite3-shm
+backups/
+*.zip
+*.bin
+*.lock
+!frontend/package-lock.json
 
 # python
 __pycache__/
 *.pyc
 .venv/
 venv/
+.pytest_cache/
+.coverage
+htmlcov/
 
 # node / react
 node_modules/
@@ -23,6 +40,8 @@ build/
 # runtime uploads
 uploads/
 backend/uploads/
+outputs/
+*.log
 
 # windows shortcuts
 *.lnk
