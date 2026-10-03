@@ -2,6 +2,14 @@
 
 This file separates upstream commits from the local working tree. Dates below describe visible Git history or this documentation checkpoint. Earlier chat history was not available to the author and is not reconstructed.
 
+## 2026-10-04 — public documentation polish
+
+- Separated Windows PowerShell and macOS/Linux commands in README/CONTRIBUTING; documented the untested macOS scope and Windows-only MT5 integration.
+- Updated safe Git/ZIP update instructions to use the app interpreter, committed frontend lockfile, and built-in backup/restore.
+- Shortened the introductory Exness section, clarified current Settings controls, and replaced inherited first-person creator/affiliate wording with explicit Simon attribution and Libre maintainer links.
+- Made AI contributor commands portable, linked the importer prompt to AGENTS/data safeguards, and removed checkout-specific wording from generic setup/data guidance.
+- No application behavior changed. Hosted CI for source commit `0765a3e` passed Windows/Linux backend and frontend checks. Documentation is validated with local link/anchor and whitespace checks rather than rerunning application tests locally.
+
 ## 2026-10-04 — initial Libre source preview
 
 - Prepared source for `npcagomoc-del/libre-trading-journal` in a separate checkout, retaining upstream history and the original Tape to Edge MIT copyright. Runtime journal data, uploaded files, credentials and unreviewed design drafts are excluded.

@@ -21,7 +21,7 @@ Under normal `launch.bat` startup:
 
 `DATABASE_PATH` and `UPLOAD_DIR` can override the first three locations; relative values resolve against backend working directory. Inspect only those configuration names locally if you need to locate data. Do not publish `.env` to obtain support. The root-level `uploads/` folder is not necessarily the active upload store; it can result from importing/running code with a different working directory.
 
-Core journal use is local, but this workspace is inside **OneDrive**, so filesystem synchronization may copy files according to your OneDrive settings. App “local” storage is not a promise that your operating system/cloud sync never copies it. An active SQLite database should not be treated as a multi-computer shared database. Use consistent backups for transfer.
+Core journal use is local. If you put the app in **OneDrive** or another synced folder, filesystem synchronization may copy files according to your settings. App “local” storage is not a promise that your operating system/cloud sync never copies it. An active SQLite database should not be treated as a multi-computer shared database. Use consistent backups for transfer.
 
 ## Database map
 

@@ -27,11 +27,9 @@ For ordinary use, run `launch.bat` **from this app folder**, keep both server wi
 
 ### Exness / MT5 Forex & Gold imports
 
-Choose **Exness / MT5 (Forex & Gold)** on Import, or use Auto-detect for a closed-position CSV. Download the Exness template or example there. The template has one row per fully closed ticket, including both opening and closing timestamps/prices, fractional lots, broker Profit, negative Commission, signed Swap, and optional S/L and T/P. Exness Personal Area offers a history CSV download ([instructions](https://get.exness.help/hc/en-us/articles/360017359859-Trading-history)); if its columns differ, copy the closed positions into the template. Native MT5 HTML reports, individual deal/order records, and partial-close rows sharing a ticket are not supported by this CSV parser. Unsupported or malformed rows stop the import with line numbers.
+Choose **Exness / MT5 (Forex & Gold)** on Import and download its template/example. Use one row per fully closed ticket, including opening/closing prices and timestamps, broker profit, signed commission and swap. Native MT5 HTML reports, individual deal/order rows and partial closes sharing a ticket are unsupported.
 
-XAUUSD defaults to 100 ounces per lot; forex defaults to 100,000 base units. Contract size can be overridden using the broker's instrument specifications. Symbol suffixes are retained. Broker Profit is authoritative: net = Profit + signed Commission + Swap minus any separate Fee. USD is the default account currency. Non-USD accounts require `account_currency` and `account_to_usd_rate`; each money component is converted and rounded to cents before net is computed. Cent-account figures must first be converted to standard USD/EUR amounts. Comma CSVs use dot decimals and may quote comma thousands; semicolon/tab CSVs also accept decimal commas.
-
-Tickets are scoped to the journal account, so repeat imports skip identical positions without merging overlapping trades. Corrected ticket rows update the position while retaining existing analysis notes and tags. Original broker timestamps are preserved without timezone conversion, and the closing date determines report placement. Swaps appear separately in trade details. Prices/lots for these positions are updated by correcting and reimporting the CSV; date/time and USD fee edits retain broker profit. The generic per-execution template remains available for other brokers.
+Follow the [Exness import tutorial](docs/USER-GUIDE.md#3-import-exness--mt5-forex-and-gold-history) for the workflow and [position-format reference](docs/DATA-GUIDE.md#exness-position-format) for sizing, currencies and repeat/corrected imports. The generic template uses one row per fill instead.
 
 The walkthrough and screenshots below are from the **upstream project**. Libre's CI checks are linked here; a passing build does not establish live AI-provider access.
 
@@ -47,7 +45,7 @@ your days on process.
 - **The numbers are not AI.** Trade grouping, P&L, fees and statistics are plain code with tests.
   AI is an optional coaching layer on top.
 - **Stocks, options, futures, crypto, forex and gold**, with partial fills, scale-ins and shorts grouped automatically.
-- **Thinkorswim and Interactive Brokers** importers, plus a template for any other broker.
+- **Thinkorswim, Interactive Brokers and Exness** importers, plus a generic fill template for other broker exports.
 - **Free and MIT licensed.** No paid tier.
 
 **[Quick start](#quick-start)** · **[Original creator's walkthrough](https://www.youtube.com/watch?v=LTR4HOfS_hc)** · **[Libre source](https://github.com/npcagomoc-del/libre-trading-journal)** · **[Privacy](#privacy-and-your-data)**
@@ -123,7 +121,7 @@ Trade reconstruction, P&L, commissions, statistics, and other core trading calcu
   trade marked where you entered it, plus an AI coaching report graded on process rather than P&L.
   Each trade's grade carries the reason it was given
 - **Brain**: a chat that answers questions against your full trading history
-- **Settings**: the name library. Strategies, sources and tags in one place, with rename, merge and
+- **Settings**: AI provider selection, journal backup/restore, MT5 market data, and the name library. Strategies, sources and tags in one place, with rename, merge and
   delete. Merging rewrites every trade that used the old name and remembers it, so the next diary
   analysis that produces the duplicate saves it under the name you kept
 - **Import**: Thinkorswim account statement CSV and Interactive Brokers (IBKR) Activity Statement CSV, with a broker dropdown (auto-detect by default). Any other broker imports through a generic CSV template, one row per fill
@@ -164,12 +162,11 @@ or delete one and reassign its trades.
 
 [![Watch: I built my own AI trading journal and stopped paying monthly](docs/video-thumbnail.png)](https://www.youtube.com/watch?v=LTR4HOfS_hc)
 
-A full tour of the app, an install from an empty folder, and three prompts that change it while
-the camera is running. Every prompt used in the video is in the video description, ready to paste.
+Simon's walkthrough covers the original app, installation and customization prompts. Libre's AI provider and backup controls are covered in the guides above.
 
 ## Quick start
 
-Requirements: [Python 3.11+](https://www.python.org/downloads/) and [Node.js with npm](https://nodejs.org/). The repository CI uses Node 24; this local documentation pass also used Node 24. See the [developer guide](docs/DEVELOPER-GUIDE.md) for exact commands and verification limits.
+Requirements: [Python 3.11+](https://www.python.org/downloads/) and [Node.js 24 with npm](https://nodejs.org/). Windows is the primary user installation path. Backend CI also runs on Linux; MT5 desktop integration requires Windows. See the [developer guide](docs/DEVELOPER-GUIDE.md) for exact commands and verification limits.
 
 **Windows, two steps:** download or clone the repo, then double-click
 
@@ -177,24 +174,36 @@ Requirements: [Python 3.11+](https://www.python.org/downloads/) and [Node.js wit
    `backend\.env` for your optional keys.
 2. `launch.bat`, every time. Then open http://localhost:3010
 
-**Manual setup (Mac, Linux, or if you prefer):**
+For manual Windows setup, use the [PowerShell instructions](docs/DEVELOPER-GUIDE.md#setup-on-windows).
+
+**Manual setup on macOS/Linux (advanced):** macOS has not been tested. These commands run the core journal and frontend; they do not provide Windows MT5 integration. From the extracted/cloned repository root:
 
 ```bash
-# 1. Python environment + backend dependencies
-python -m venv .venv
-.venv\Scripts\activate         # Windows (source .venv/bin/activate on Mac/Linux)
-pip install -r backend/requirements.txt
-
-# 2. Frontend dependencies
+# Install dependencies
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install -r backend/requirements.txt
 cd frontend
 npm ci
 cd ..
-
-# 3. Run both (Windows; launch.bat picks up .venv automatically)
-launch.bat
 ```
 
-`launch.bat` starts the FastAPI backend on http://localhost:8010 and the React frontend on http://localhost:3010. On Mac/Linux run them manually: `python -m uvicorn main:app --reload --port 8010` from `backend/`, and `PORT=3010 npm start` from `frontend/`.
+Then open two terminals in the repository root. Keep both running:
+
+```bash
+# Terminal 1: backend
+source .venv/bin/activate
+cd backend
+python -m uvicorn main:app --reload --host 127.0.0.1 --port 8010
+```
+
+```bash
+# Terminal 2: frontend
+cd frontend
+PORT=3010 npm start
+```
+
+Open http://localhost:3010. Optional Alpaca configuration goes in `backend/.env`; create it from `.env.example` if needed. Keep the backend on 8010 and frontend on 3010 for ChatGPT sign-in.
 
 To run them on other ports, tell each side about the other: `REACT_APP_API_URL` for the frontend,
 and, only if the frontend is not on localhost, `FRONTEND_ORIGINS` (comma separated) for the
@@ -207,8 +216,7 @@ then import your broker's statement on the Import page.
 
 With normal launcher startup, your trades live in `backend/trading_journal.db`, diary attachments in
 `backend/uploads/`, and optional settings/keys in `backend/.env`. Custom paths can override these.
-Back up before updating: startup can migrate existing tables, including a transactional rebuild for
-the multi-asset constraint. The migration backup is not a replacement for regular backups.
+Before updating, download and check a backup in **Settings → Backup & restore**, then stop both server windows. Startup can migrate existing tables, including a transactional rebuild for the multi-asset constraint. The migration backup is not a replacement for regular backups.
 
 Follow the [developer update procedure](docs/DEVELOPER-GUIDE.md#extend-or-update-safely)
 before updating or merging upstream changes. Do not blindly overwrite local data or code changes with a ZIP.
@@ -216,24 +224,23 @@ The examples below apply only after reviewing/preserving local work.
 
 **If you cloned with git:**
 
-```bash
-git pull
-pip install -r backend/requirements.txt   # only if requirements changed
-cd frontend && npm install && cd ..       # only if package.json changed
-launch.bat
+Windows PowerShell, from the app root; run each command separately and stop at any error:
+
+```powershell
+git status --short
+git pull --ff-only
+.\.venv\Scripts\python.exe -m pip install -r backend\requirements.txt
+Push-Location frontend
+npm.cmd ci
+Pop-Location
+.\launch.bat
 ```
 
-**If you downloaded the ZIP:** prepare the new folder separately, install its dependencies, then
-transfer a consistent database backup, the matching `uploads` folder and intended configuration
-before starting it. Use the [backup and restore guide](docs/DATA-GUIDE.md#backup-a-consistent-journal)
-rather than copying an active database. The file locations include:
+If `git status` lists changes or `git pull --ff-only` refuses, preserve the files and follow the developer update guide instead of forcing the update. On macOS/Linux, use the activated virtual environment and the manual startup above.
 
-The normal destination paths are `backend/trading_journal.db`, `backend/uploads/` and `backend/.env`.
-Install both backend and frontend dependencies using the developer guide, then start with `launch.bat`.
+**If you downloaded the ZIP:** extract the new source into a separate folder, run setup and launch there, then use **Settings → Backup & restore** to check and restore your saved journal ZIP. Keep the old folder and backup until you verify your records and attachments. Reconnect AI and MT5 credentials on the new installation, and copy intended optional Alpaca configuration privately. Follow the [backup tutorial](docs/BACKUP-RESTORE.md).
 
-SQLite uses WAL sidecars while active. A complete journal backup needs a consistent database snapshot
-and its diary uploads, plus private configuration if required. Follow the [backup instructions](docs/DATA-GUIDE.md#backup-a-consistent-journal);
-the documentation pass did not perform a restore into your real journal.
+If the app cannot start, the [advanced offline backup/recovery guide](docs/DATA-GUIDE.md#backup-a-consistent-journal) explains consistent SQLite snapshots and uploads. Do not copy an active database without its committed WAL data.
 
 To check what changed, see the [changelog](docs/CHANGELOG.md) and [Libre commit history](https://github.com/npcagomoc-del/libre-trading-journal/commits/main/).
 
@@ -277,7 +284,7 @@ The AI coach uses the provider selected in **Settings → AI provider**. **ChatG
 
 To prevent extra spending, leave **Allow apps to use credits after reaching your usage limit** disabled in [ChatGPT Usage settings](https://chatgpt.com/settings/usage). This app never falls back to API-key billing. If plan usage is unavailable or exhausted, coaching shows an error.
 
-On Windows, tokens are encrypted for your Windows user with DPAPI and stored under `%LOCALAPPDATA%\TradingJournalAI\chatgpt`, outside this OneDrive checkout. Disconnect in Settings to remove local tokens and attempt remote revocation. You can also revoke the app in ChatGPT settings. The OAuth callback is `http://127.0.0.1:8010/auth/callback`; keep the backend on port 8010.
+On Windows, tokens are encrypted for your Windows user with DPAPI and stored under `%LOCALAPPDATA%\TradingJournalAI\chatgpt`, outside the repository. Disconnect in Settings to remove local tokens and attempt remote revocation. You can also revoke the app in ChatGPT settings. The OAuth callback is `http://127.0.0.1:8010/auth/callback`; keep the backend on port 8010.
 
 `backend/.env` is only needed for optional market data. Copy `.env.example` there if it is missing, fill in the Alpaca credentials, then restart the backend. TradingView and MT5 credentials do not replace Alpaca credentials in the existing chart provider.
 
@@ -289,15 +296,15 @@ On Windows, tokens are encrypted for your Windows user with DPAPI and stored und
 
 Official integration reference: [Sign in with ChatGPT for open-source apps](https://developers.openai.com/siwc/token-sharing-open-source).
 
-## Make it yours with Claude Code
+## Customize with an AI coding assistant
 
 The original Trading-Journal-AI app was built by Simon with Claude Code, one session at a time. The Libre modifications build on that foundation. The upstream customization approach remains useful; the actual AI instructions for this repository are in [AGENTS.md](AGENTS.md).
 
-This repo is meant to be adapted, and the fastest way is to point Claude Code at it. A ready-to-paste prompt:
+You can use an AI coding assistant to adapt the app. Start it with [AGENTS.md](AGENTS.md) so it knows the code map, data safeguards and checks. A sample prompt:
 
 **Adapt the importer to your broker:**
 
-> Read backend/csv_parser.py. It parses Thinkorswim account statement CSVs and Interactive Brokers Activity Statement CSVs: each broker parser reads execution rows (date, time, buy/sell, quantity, symbol, price, fees) into a common execution dict shape (action BOT/SOLD, qty, ticker, price, instrument_type, date, iso_date, time, amount, commission) and hands them to build_trades_from_executions, which groups them into round-trip trades by position open/close cycles and de-duplicates against the database. Here is a sample CSV export from my broker (pasted below / attached). Write a parse_<broker>_csv function for my broker's format following parse_ibkr_csv as the template, register it in BROKER_PARSERS and BROKER_LABELS, teach detect_broker to recognise the file, and add the broker to the BROKERS dropdown in frontend/src/components/Import.js with its export instructions. Keep the duplicate-detection fingerprints working.
+> Read AGENTS.md, docs/PROJECT-STATUS.md and backend/csv_parser.py. Using the synthetic broker sample below, add a fill-based importer following parse_ibkr_csv and the CONTRIBUTING guide. Register it in BROKER_PARSERS and BROKER_LABELS, update detect_broker and the Import dropdown/export instructions, and add regression tests with hand-worked expected P&L. Preserve account-scoped duplicate detection, notes/tags, asset multipliers and currency conventions. Use a disposable database and never read or modify the real journal. Update the affected guides and report the checks performed.
 
 ## Contributing
 
@@ -309,16 +316,11 @@ privately, as described in [SECURITY.md](SECURITY.md), not in a public issue.
 
 **Original creator: Simon, a day trader, GitHub [simonro](https://github.com/simonro), publishing as Tape to Edge.** He built Trading-Journal-AI with Claude Code to make journaling easier. Libre Trading Journal is a derivative with additional integrations and data controls; the original work remains credited here and in Settings.
 
-- YouTube: [@tapetoedge](https://www.youtube.com/@tapetoedge), where I show what I build and how
-- X: [@tapetoedge](https://x.com/tapetoedge)
-- Newsletter: [tape-to-edge.beehiiv.com](https://tape-to-edge.beehiiv.com), a free community for
-  traders sharing the tools we make and the strategies we run. One email a week. Nothing for sale.
+Simon's links: [YouTube @tapetoedge](https://www.youtube.com/@tapetoedge), [X @tapetoedge](https://x.com/tapetoedge), and [Tape to Edge newsletter](https://tape-to-edge.beehiiv.com).
 
-I take no affiliate money from any broker or tool, and this app has no paid tier, no account and no
-telemetry. If it is useful, fork it.
+Libre is maintained in [npcagomoc-del/libre-trading-journal](https://github.com/npcagomoc-del/libre-trading-journal). Report Libre issues here; the original project remains [simonro/Trading-Journal-AI](https://github.com/simonro/Trading-Journal-AI).
 
-Educational content, not financial advice. I have no affiliate relationship with anything I show or
-use, ever.
+Educational software, not financial advice.
 
 ## License
 

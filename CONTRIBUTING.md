@@ -26,14 +26,13 @@ These decide most review questions, so they are worth knowing before you start:
 
 Requirements: Python 3.11+ and Node.js 24 with npm.
 
-On Windows, run `setup.bat` once and `launch.bat` to start. By hand:
+On Windows, run `setup.bat` once and `launch.bat` to start. For manual setup, follow the [PowerShell developer instructions](docs/DEVELOPER-GUIDE.md#setup-on-windows). Then install pytest into the app environment:
 
-```bash
-python -m venv .venv
-.venv\Scripts\activate            # source .venv/bin/activate on Mac/Linux
-pip install -r backend/requirements.txt pytest
-cd frontend && npm ci && cd ..
+```powershell
+.\.venv\Scripts\python.exe -m pip install pytest
 ```
+
+For macOS/Linux, use the separate [manual setup](README.md#quick-start), then `python -m pip install pytest` with the virtual environment activated.
 
 The backend runs on http://localhost:8010 and the frontend on http://localhost:3010.
 
@@ -43,17 +42,21 @@ commit real trades**: not in tests, fixtures, screenshots or issues. For a fresh
 
 ## Tests
 
-CI runs all three of these on every pull request, and they must pass:
+CI runs backend tests on Windows and Linux, plus frontend tests/build, on every pull request. Windows PowerShell, starting at app root:
 
-```bash
+```powershell
 # backend
-python -m pytest backend/tests -q
+.\.venv\Scripts\python.exe -m pytest backend/tests -q
 
 # frontend: integration tests, then a production build
-cd frontend
-npx craco test --watchAll=false
-npm run build
+Push-Location frontend
+$env:CI = 'true'
+npm.cmd test -- --watchAll=false --runInBand
+npm.cmd run build
+Pop-Location
 ```
+
+On macOS/Linux, use `python -m pytest backend/tests -q` in the activated environment, and run `CI=true npm test -- --watchAll=false --runInBand` and `CI=true npm run build` from `frontend/`.
 
 In CI, `npm run build` treats lint warnings as errors, so an unused variable or import fails the
 build. Run `npx eslint src` in `frontend/` to see them locally.
@@ -85,7 +88,7 @@ round trips, duplicate detection and P&L are shared, so a new broker needs no ch
    trades removed**. Invented prices are fine; the sample only needs the broker's exact layout.
 
 If you just want your broker supported, open an issue with a redacted sample export and the steps
-you use to download it. Until then, the generic template on the Import page works for any broker.
+you use to download it. Until then, map compatible fill exports into the generic template on Import. Exness closed-position rows have their own template/parser; do not treat them as execution fills.
 
 ## Pull requests
 
@@ -93,8 +96,7 @@ you use to download it. Until then, the generic template on the Import page work
 - Describe what changed and why, and how you tested it.
 - Say so if the change adds a dependency, a network call, file access outside the app folder, or a
   database change. New dependencies need a reason.
-- Database changes must keep existing databases working: new tables and columns are added on start,
-  and nothing a user already has is rewritten or dropped.
+- Database changes must preserve existing records and IDs. Document migration steps, consistent backups and recovery; never replace a user's journal with an empty database.
 - Never include `.env` files, API keys, databases or broker statements.
 
 ## Code style

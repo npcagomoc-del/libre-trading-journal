@@ -148,7 +148,7 @@ npm.cmd run build
 
 CI uses the equivalent CRACO test/build commands. `CI=true` makes production-build lint warnings fail. These commands use temporary/mock data in tests; review new fixtures before running unfamiliar changes.
 
-**Existing-dependencies fallback used in this Codex shell:** node was available but npm/npx were not. With `frontend/node_modules` already installed, run from `frontend/`:
+**If npm is unavailable but dependencies are already installed:** with `frontend/node_modules` present and Node on PATH, run from `frontend/`:
 
 ```powershell
 $env:CI = 'true'
@@ -162,7 +162,7 @@ At the 4 October source preview checkpoint: **158 backend tests passed in a fres
 
 ## Extend or update safely
 
-1. Read `git status`, compare the intended files, and preserve existing local changes. This checkout is not a clean upstream release.
+1. Read `git status`, compare the intended files, and preserve existing local changes. Libre has additional features beyond its upstream base; do not reset it to upstream as an update procedure.
 2. Back up consistent database + uploads before an authorized update or migration. Preserve `.env` separately and reconnect external services if moving Windows user/machine.
 3. Inspect upstream changes before merging them into this customized version. A blind `git pull` or ZIP overwrite can conflict with local feature work; do not use force/reset as an update procedure.
 4. Install requirements with the repo interpreter when needed; use `npm ci` for the committed lockfile. Review dependency/lock changes rather than automatically accepting a generated replacement.

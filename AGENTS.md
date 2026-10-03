@@ -12,7 +12,7 @@ These documents describe inspected code, not hidden conversation history. Verify
 
 ## Working rules
 
-- Use the repo's `.venv/Scripts/python.exe`. For runtime, set working directory to `backend/`; default database and upload paths are relative to it. UI runs in `frontend/` on port 3010; backend on loopback port 8010. ChatGPT callback is fixed to 8010.
+- Use the repo's `.venv/Scripts/python.exe` on Windows or `.venv/bin/python` on macOS/Linux. For runtime, set working directory to `backend/`; default database and upload paths are relative to it. UI runs in `frontend/` on port 3010; backend on loopback port 8010. ChatGPT callback is fixed to 8010.
 - Keep trade grouping, USD money calculations, fee signs, multipliers, currency conversion and duplicate handling deterministic. Changes need worked expected values and meaningful regression tests. Preserve account-scoped Exness tickets and notes/tags on corrected imports.
 - Never use the user's live database for tests, seed demo data into it, delete it to fix startup, or print real trades/credentials. Use temporary databases and synthetic fixtures. Do not read `.env`, OAuth token files or encrypted MT5 keys merely to inspect setup.
 - Take a consistent backup before an authorized migration/data repair. SQLite uses WAL. Include diary uploads, and preserve the previous database when restoring. Follow `docs/DATA-GUIDE.md`.
@@ -27,5 +27,7 @@ These documents describe inspected code, not hidden conversation history. Verify
 
 From app root: `.\.venv\Scripts\python.exe -m pytest backend/tests -q`.
 From `frontend/`: `npm.cmd test -- --watchAll=false --runInBand`, then `npm.cmd run build` with `CI=true` for CI-equivalent lint enforcement. See the developer guide for a bundled-Node fallback when npm is absent. Choose checks appropriate to the change; do not install dependencies or repeat full suites unnecessarily.
+
+On macOS/Linux use `.venv/bin/python -m pytest backend/tests -q` from app root and `CI=true npm test -- --watchAll=false --runInBand`, then `CI=true npm run build` from `frontend/`.
 
 Report changed files, actual commands/results, unresolved failures and anything not tested. Update `docs/CHANGELOG.md` with evidenced changes, keeping uncommitted local work separate from upstream commit history. Do not infer release status, completed live connections or user decisions that the evidence does not establish.
