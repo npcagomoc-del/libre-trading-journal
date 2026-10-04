@@ -300,7 +300,7 @@ export default function Settings({ accounts = [], accountId = null }) {
     <div>
       <PageHeader
         title="Settings"
-        subtitle="Connect your tools, protect your journal, and organize your trading vocabulary."
+        subtitle="Connections, backups, and trade categories."
       />
 
       <AIProviderSettings />

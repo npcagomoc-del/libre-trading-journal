@@ -39,6 +39,22 @@ Synthetic example: broker profit `$16.17`, commission `-$0.33`, swap `$0.00` giv
 
 Repeat imports into the **same journal account** skip identical tickets. Corrected rows update those tickets while retaining existing analysis and tags. Correct Exness prices/lots in the CSV and reimport; the execution editor restricts those changes to preserve broker-reported profit. A different journal account has its own ticket scope.
 
+### Review Philippine time and trading sessions
+
+**Trade View** shows the original entry timestamp, **Philippine entry (PHT)** with its own date and AM/PM time, and the **Trading session** at entry. Conversion uses the entry execution, including short positions and overnight trades. Stored broker timestamps stay intact.
+
+In **Dashboard → Patterns**, select **Entry time** for half-hour performance or **Trading sessions** for trades, win rate, average P&L and total P&L. **Reports → Timing** includes both breakdowns. All 24 hours are supported; views show windows containing trades.
+
+Philippine time is automatic for Exness UTC records and executions with timezone metadata. **Original entry** and **Philippine time** appear side by side in Patterns and Reports Timing. When a Philippine half-hour includes trades with different original hours (mixed sources or daylight-saving dates), all corresponding original half-hour labels are shown. Each performance row is counted once.
+
+Use **Adjust original timezone** only when the recorded source clock needs correction. Leave **Original trade timezone** on **Auto** for ordinary Exness records. The original clock is labeled **Exness · UTC+0**, beside **Philippine time (UTC+8)**. Uniform source clocks appear once above the table; mixed sources/clocks are labeled beside their original hours. A manually selected clock is shown explicitly with **Reset to Auto**. For other imports/manual records, select the actual recorded clock (UTC, Philippine time, New York, London, fixed UTC+2 or UTC+3). This browser preference applies across Trade View, Dashboard and Reports, including all displayed accounts. Return to Auto when viewing mixed sources; an explicit choice interprets naive timestamps in that selected clock. Timestamps containing an explicit UTC offset retain that offset.
+
+Records without a known source clock or usable entry timestamp show **Unclassified**. They are omitted from Philippine hour buckets and retained in the Unclassified session totals. Ambiguous daylight-saving local times require an offset-bearing timestamp; the app does not guess which occurrence was intended.
+
+Session windows use each city's local weekday and historical daylight saving: Sydney 08:00–17:00, Tokyo 09:00–18:00, London 08:00–17:00, New York 08:00–17:00. These are forex analysis conventions, not exchange or broker instrument schedules. Overlaps form combined buckets such as **London + New York**, and every trade counts once. Outside those windows is **Outside sessions**.
+
+**Date filters and calendars still use the original journal closing date.** The Philippine entry column can show another date. Example: October 2 at 16:10 UTC becomes October 3 at 00:10 PHT. Money calculations and the original trade records are unchanged.
+
 ## 4. Import other brokers
 
 Choose Thinkorswim account statement CSV or IBKR Activity Statement CSV for their dedicated formats. **Auto-detect** attempts to identify supported headers.
@@ -78,7 +94,7 @@ Missing chart/AI results do not mean your imported trades failed to save. Stored
 
 ### Choose your AI provider
 
-Open **More → Settings → Your AI, your choice** and choose **ChatGPT sign-in**, **OpenAI API key (ChatGPT API)**, **Claude API key**, or **OpenRouter API key**. This selection applies to Brain, diary analysis, insights, and reviews. Other saved connections remain available when you switch.
+Open **More → Settings → AI connection** and choose **ChatGPT sign-in**, **OpenAI API key (ChatGPT API)**, **Claude API key**, or **OpenRouter API key**. This selection applies to Brain, diary analysis, insights, and reviews. Other saved connections remain available when you switch.
 
 For an API choice, paste the matching service's key, choose/enter its **Model ID**, then **Save settings**. Use **Refresh models** for suggestions and **Test connection** to verify access; the test can incur API charges. A ChatGPT subscription does not include OpenAI API billing. Your OpenRouter Claude key belongs under **OpenRouter**, with its full model slug. Leave the key blank to retain it when changing the model. See the [complete provider tutorial](AI-PROVIDERS.md).
 
@@ -107,7 +123,7 @@ Open **Brain** in the top bar and check its provider/model status. If setup is n
 
 ## 8. Connect MT5 price charts (optional, Windows)
 
-1. Open the MT5 terminal and sign into the intended trading account there.
+1. Open the MT5 desktop terminal on this computer and sign into the intended trading account. Keep it open and connected while loading charts; you can minimize it. Reviewing journal records without charts does not require MT5.
 2. Open **More → Settings → Market data · MT5**. Select the journal account and the actual price provider: FundedNext, FTMO or Exness.
 3. Choose one connection method:
    - **MT5 MCP · built-in server:** if your terminal offers **Tools → Options → MCP**, enable its internal server. Enter its localhost `/mcp` address and access key. The UI defaults to `http://127.0.0.1:22346/mcp`. If your terminal lacks that option, use the Python method.
@@ -116,6 +132,8 @@ Open **Brain** in the top bar and check its provider/model status. If setup is n
 5. Set **Trade timestamp clock** to the clock of your recorded trades. Exness imported trades use UTC+0 automatically. Choose UTC+8 only for records actually written in Philippine time.
 6. For MCP, also set **MT5 server clock for these dates** to the provider's historical clock. The UI offers UTC+0/+2/+3; verify the applicable date with your terminal/broker rather than using today's seasonal offset for all history.
 7. Click **Connect & test MT5**, then open a forex/gold/supported crypto trade and inspect its chart. Keep MT5 connected.
+
+For a visual guide, expand **Watch MT5 walkthrough** below the setup steps. The embedded 24-second setup excerpt uses the original recording, with playback controls, optional captions and a real MT5 screenshot preview. MCP keys, account identifiers and browser details are masked. Audio and the private trading-history section are excluded from the public video. Follow the numbered steps to test the connection and open your trade chart.
 
 The journal reads prices and account identity; it does not place orders. Prices from FTMO/FundedNext may be a reference for Exness trades and can differ from execution prices. Changing the signed-in MT5 account can trigger an identity mismatch until you intentionally reconnect. [Chart troubleshooting](TROUBLESHOOTING.md#mt5-and-other-chart-errors) covers missing candles and wrong clocks.
 

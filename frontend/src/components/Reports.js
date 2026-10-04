@@ -4,6 +4,7 @@ import {
   ResponsiveContainer, Cell, ReferenceLine, AreaChart, Area,
 } from 'recharts';
 import { reportsApi, edgeReportApi } from '../api';
+import { useSourceClock, SourceClockControl, ConversionNotice, TimePerformanceTable, SessionHours } from './TradingTime';
 import DateRangePicker from './DateRangePicker';
 import { RMultipleDist, EmotionTable, MistakeFreq, HoldTime } from './Edge';
 import { PageHeader, PanelHead } from './ui';
@@ -243,6 +244,7 @@ function DrawdownCurve({ curve }) {
 }
 
 export default function Reports({ accountId }) {
+  const [sourceClock, setSourceClock] = useSourceClock();
   // one view mode for the whole page: you are either scanning or reading numbers
   const [view, setView] = useState('bars');
   const [tab, setTab] = useState('overview');
@@ -253,6 +255,7 @@ export default function Reports({ accountId }) {
   const [dateTo, setDateTo] = useState('');
 
   useEffect(() => {
+    let current = true;
     setLoading(true);
     const params = {};
     if (accountId != null) params.account_id = accountId;
@@ -260,13 +263,15 @@ export default function Reports({ accountId }) {
     if (dateTo) params.date_to = dateTo;
     Promise.all([
       reportsApi.get(params).then(r => r.data).catch(() => null),
-      edgeReportApi.get(params).then(r => r.data).catch(() => null),
+      edgeReportApi.get({ ...params, source_timezone: sourceClock }).then(r => r.data).catch(() => null),
     ]).then(([rep, edg]) => {
+      if (!current) return;
       setData(rep && rep.has_data ? rep : null);
       setEdge(edg);
       setLoading(false);
     });
-  }, [accountId, dateFrom, dateTo]);
+    return () => { current = false; };
+  }, [accountId, dateFrom, dateTo, sourceClock]);
 
   const s = data?.summary;
   const gap = { display: 'flex', flexDirection: 'column', gap: 20 };
@@ -409,10 +414,19 @@ export default function Reports({ accountId }) {
 
           {tab === 'timing' && (
             <>
+              <SourceClockControl value={sourceClock} onChange={setSourceClock} originalClocks={edge?.time_conversion?.original_clocks} />
+              <ConversionNotice conversion={edge?.time_conversion} />
+              <Section title="By Entry Time" hint="30-minute windows, grouped by Philippine time.">
+                <TimePerformanceTable rows={(edge?.philippine_time_of_day || []).filter(r => r.trade_count > 0)} />
+              </Section>
+              <Section title="By Trading Session">
+                <SessionHours />
+                <TimePerformanceTable rows={edge?.trading_sessions || []} session />
+              </Section>
               <Section title="By Day of Week">
                 <Breakdown view={view} rows={data.by_day_of_week} labelHead="Day" />
               </Section>
-              <Section title="By Time of Day" hint="Bucketed on first entry.">
+              <Section title="By Recorded Entry Window" hint="Original source-clock windows; these are separate from Philippine time and market sessions above.">
                 <Breakdown view={view} rows={data.by_session} labelHead="Entry window" />
               </Section>
               <Section title="By Hold Time" hint="First entry to last exit. Short holds are usually stop-outs and chases.">

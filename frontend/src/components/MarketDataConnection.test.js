@@ -66,3 +66,18 @@ test('switching journal accounts clears previous feed and disconnect is account 
   await waitFor(() => expect(marketDataApi.status).toHaveBeenCalledWith(2));
   expect(screen.queryByText(/Saved feed:/)).not.toBeInTheDocument();
 });
+
+
+test('walkthrough stays collapsed and provides captioned video without autoplay', async () => {
+  render(<MarketDataConnection accounts={accounts} accountId={1} />);
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Connect & test MT5' })).toBeEnabled());
+  const disclosure = screen.getByText('Watch MT5 walkthrough').closest('details');
+  expect(disclosure).not.toHaveAttribute('open');
+  const video = screen.getByLabelText('MT5 chart setup walkthrough');
+  expect(video).toHaveAttribute('controls');
+  expect(video).toHaveAttribute('preload', 'none');
+  expect(video).not.toHaveAttribute('autoplay');
+  expect(video.querySelector('source')).toHaveAttribute('src', '/tutorials/mt5-charts-guide.mp4');
+  expect(video.querySelector('track')).toHaveAttribute('kind', 'captions');
+  expect(screen.getByText(/Keep MT5 open and signed in while loading charts/)).toBeInTheDocument();
+});

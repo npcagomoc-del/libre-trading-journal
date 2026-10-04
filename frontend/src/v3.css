@@ -484,3 +484,23 @@ table.v3-t tbody tr.thin td { opacity: 0.6; }
 }
 
 @media (max-width: 1380px) { :root { --sticky-offset: 110px; } }
+
+/* Quiet clock settings; manual overrides stay visible when collapsed. */
+.trading-clock { margin: 12px 0 18px; font-size: 13px; }
+.trading-clock-summary { display: flex; align-items: baseline; flex-wrap: wrap; gap: 8px 18px; color: var(--text-secondary); }
+.trading-clock-link { padding: 0; border: 0; background: none; color: var(--text-secondary); font: inherit; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.trading-clock-link:hover { color: var(--text-primary); }
+.trading-clock-override { color: var(--accent-line); }
+.trading-clock-settings { margin-top: 12px; padding: 12px 16px; border-left: 2px solid var(--divider); }
+.trading-clock-settings label { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+.trading-clock-settings select { max-width: 100%; }
+.trading-clock-settings p { font-size: 12px; margin: 8px 0 0; }
+.trading-clock-notice { font-size: 13px; color: var(--accent-line); margin: 8px 0 16px; }
+
+.trading-session-hours { margin: 8px 0 16px; font-size: 12px; color: var(--text-secondary); }
+.trading-session-hours summary { cursor: pointer; width: fit-content; }
+.trading-session-hours p { max-width: 720px; line-height: 1.6; margin: 8px 0; }
+
+.trading-original-clock { display: block; margin-top: 3px; color: var(--text-tertiary); font-size: 11px; font-family: var(--font-sans, inherit); }
+
+.trading-original-entry { display: inline-block; margin-right: 18px; }

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Cable } from 'lucide-react';
 import { marketDataApi } from '../api';
+import './journal-settings.css';
 
 const errorText = e => e?.response?.data?.detail || e?.message || 'Connection failed';
 const defaults = { transport: 'mcp', broker: 'fundednext', path: '', utc_offset_hours: 0, test_symbol: 'XAUUSD', mcp_url: 'http://127.0.0.1:22346/mcp', server_utc_offset_hours: 3 };
@@ -58,8 +59,25 @@ export default function MarketDataConnection({ accounts, accountId }) {
   return (
     <section className="card" aria-label="MT5 market data" style={{ marginBottom: 'var(--space-5)' }}>
       <h2 className="section-title"><Cable size={19} aria-hidden="true" /> Market data · MT5</h2>
-      <p className="section-sub">Forex, gold and supported crypto charts from your existing MT5 desktop terminal. No separate market-data subscription.</p>
-      <p className="text-muted" style={{ fontSize: 13, margin: '12px 0' }}>Open MetaTrader 5 on this computer and sign into your account there, then connect below. Keep MT5 connected while using charts. This connection only reads prices.</p>
+      <p className="section-sub">Use prices from your MT5 desktop terminal for trade charts.</p>
+      <div className="settings-guide" aria-labelledby="mt5-guide-title">
+        <h3 id="mt5-guide-title">Set up trade charts</h3>
+        <p className="connection-copy"><strong>Keep MT5 open and signed in while loading charts.</strong> You can minimize it. MT5 is not needed for reviewing journal records without charts.</p>
+        <ol className="settings-steps">
+          <li><strong>Open MT5 on this computer.</strong> Sign in to the broker account you want to use for prices. Wait until MT5 is connected.</li>
+          <li><strong>Choose the connection method below.</strong> {draft.transport === 'mcp' ? <>In MT5, go to <b>Tools → Options → MCP</b> and enable the internal server. Copy its local address and access key into the matching fields below. If your MT5 has no MCP tab, select <b>MT5 Python · desktop terminal</b>.</> : <>Select your MT5 installation below, or leave the terminal field blank to auto-detect it. No MCP access key is needed.</>}</li>
+          <li><strong>Match your account and clocks.</strong> Choose the journal account and the broker supplying prices. Use the exact symbol shown in MT5 Market Watch, including any suffix. For Exness app history, set the trade timestamp clock to <b>UTC+0</b>.{draft.transport === 'mcp' && ' Set the MT5 server clock to the price provider’s clock on the trade date.'}</li>
+          <li><strong>Connect, then open a trade.</strong> Click <b>Connect &amp; test MT5</b>. Once test candles are returned, open a forex, gold, or supported crypto trade in <b>Trade View</b> to see its chart.</li>
+        </ol>
+        <details className="settings-details mt5-walkthrough">
+          <summary>Watch MT5 walkthrough</summary>
+          <video controls preload="none" poster="/tutorials/mt5-setup.jpg" aria-label="MT5 chart setup walkthrough">
+            <source src="/tutorials/mt5-charts-guide.mp4" type="video/mp4" />
+            <track kind="captions" src="/tutorials/mt5-charts-guide.en.vtt" srcLang="en" label="English" />
+            Your browser does not support this video. Follow the steps above.
+          </video>
+        </details>
+      </div>
       {!accounts.length ? <div role="status">Create a journal account first.</div> : <>
         <div className="form-grid">
           <div className="form-group"><label htmlFor="mt5-connection">Connection method</label>
@@ -107,8 +125,10 @@ export default function MarketDataConnection({ accounts, accountId }) {
             </select>
           </div>
         </div>
-        {draft.transport === 'mcp' && <p className="text-muted" style={{ fontSize: 13 }}>In MT5: Tools → Options → MCP → Enable internal server. This key grants local MT5 access. The journal saves it encrypted on this computer and only calls read-only tools.</p>}
-        <p className="text-muted" style={{ fontSize: 13 }}>Choose the clock used by your trade timestamps, even when the price provider differs. Exness imports use UTC+0 automatically. For FTMO history, check whether that trade date used UTC+2 or UTC+3.</p>
+        <details className="settings-details"><summary>About access and chart clocks</summary>
+          <p className="connection-copy">This connection only reads account details and prices; it cannot place trades. MCP access keys are saved encrypted on this computer.</p>
+          <p className="connection-copy">Trade timestamps and the price provider may use different clocks. Exness imports use UTC+0 automatically. For FTMO or FundedNext, confirm whether the historical date used UTC+2 or UTC+3.</p>
+        </details>
         {config && <p role="status">Saved feed: {config.broker.toUpperCase()} · {config.server} · {config.account_label}</p>}
         {draft.broker !== 'exness' && <p className="text-muted" style={{ fontSize: 13 }}>These prices are a reference for Exness trades; broker quotes and candle shapes may differ.</p>}
         {error && <div className="notice neg" role="alert">{error}</div>}

@@ -109,9 +109,9 @@ export default function AIProviderSettings() {
     finally { setBusy(false); }
   };
   return <section className="card journal-connection" aria-labelledby="ai-provider-title" id="ai-provider-settings">
-    <div className="connection-heading"><div className="connection-icon"><Brain size={20} aria-hidden="true" /></div><div><div className="connection-eyebrow">OPTIONAL COACHING</div><h2 className="section-title" id="ai-provider-title">Your AI, your choice</h2><p className="connection-copy">One provider for Brain, diary analysis, and trading reviews.</p></div></div>
+    <div className="connection-heading"><div className="connection-icon"><Brain size={20} aria-hidden="true" /></div><div><h2 className="section-title" id="ai-provider-title">AI connection</h2><p className="connection-copy">Choose the provider used by Brain, diary analysis, and reviews.</p></div></div>
     <div className="provider-selection"><label htmlFor="ai-provider"><span className="field-label">AI provider</span><select id="ai-provider" value={data?.active_provider || 'chatgpt'} disabled={busy || !data} onChange={e => choose(e.target.value)}>{Object.entries(LABELS).map(([id, label]) => <option key={id} value={id}>{label}</option>)}</select></label>
-      {selected && <div className="connection-badges" aria-label="Provider status"><span className="connection-badge active">Active provider</span><span className="connection-badge"><KeyRound size={12} aria-hidden="true" />{selected.configured ? 'Configured' : 'Setup needed'}</span><span className="connection-badge">{selected.supports_images === true ? 'Images supported' : selected.supports_images === false ? 'Text only' : 'Image support unknown'}</span></div>}
+      {selected && <div className="connection-badges" aria-label="Provider status"><span className="connection-badge"><KeyRound size={12} aria-hidden="true" />{selected.configured ? 'Configured' : 'Setup needed'}</span></div>}
     </div>
     {!data && !loadError && <p role="status" className="connection-copy">Loading providers…</p>}
     {(loadError || error) && <div className="notice neg" role="alert">{loadError || error} <button type="button" className="btn btn-ghost btn-sm" onClick={refresh}>Retry</button></div>}

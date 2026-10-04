@@ -8,13 +8,13 @@ Built on [Trading-Journal-AI](https://github.com/simonro/Trading-Journal-AI) by 
 
 **Install with an AI assistant:** Paste the [installation prompt](docs/AI-INSTALL.md#copy-this-installation-prompt) into a coding assistant with terminal and file access on your PC. Use the [startup repair prompt](docs/AI-INSTALL.md#copy-this-prompt-if-the-app-will-not-open) if the app will not open.
 
-Choose **More → Settings → AI provider** for ChatGPT sign-in, an OpenAI API key, a Claude API key, or an OpenRouter API key. Brain, diary analysis, insights, and reviews use the selected provider. API usage is billed by the provider; the core journal works without AI. See the [AI provider guide](docs/AI-PROVIDERS.md).
+Choose **More → Settings → AI connection** for ChatGPT sign-in, an OpenAI API key, a Claude API key, or an OpenRouter API key. Brain, diary analysis, insights, and reviews use the selected provider. API usage is billed by the provider; the core journal works without AI. See the [AI provider guide](docs/AI-PROVIDERS.md).
 
 Use **More → Settings → Backup & restore** to download a journal ZIP, check a backup, or restore it with a recovery copy created first. Backups include the database and diary attachments, excluding API keys, OAuth tokens, and .env files. See the [backup guide](docs/BACKUP-RESTORE.md).
 
 ## Start here
 
-The screenshots and video show Simon's original app. See [project status](docs/PROJECT-STATUS.md) for current features, test results and known issues.
+The screenshots below show the current Libre Trading Journal interface using a disposable journal with synthetic trades. See [project status](docs/PROJECT-STATUS.md) for test results and known issues.
 
 | I want to… | Guide |
 |---|---|
@@ -36,7 +36,7 @@ Choose **Exness / MT5 (Forex & Gold)** on Import and download its template/examp
 
 Follow the [Exness import tutorial](docs/USER-GUIDE.md#3-import-exness--mt5-forex-and-gold-history) for the workflow and [position-format reference](docs/DATA-GUIDE.md#exness-position-format) for sizing, currencies and repeat/corrected imports. The generic template uses one row per fill instead.
 
-The walkthrough and screenshots are from the **original project**. The badge below links to automated checks for Libre Trading Journal.
+The badges below link to automated checks and the license for Libre Trading Journal.
 
 [![CI](https://github.com/npcagomoc-del/libre-trading-journal/actions/workflows/ci.yml/badge.svg)](https://github.com/npcagomoc-del/libre-trading-journal/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
@@ -54,10 +54,9 @@ your days on process.
 
 **[Quick start](#quick-start)** · **[Original creator's walkthrough](https://www.youtube.com/watch?v=LTR4HOfS_hc)** · **[Libre Trading Journal source](https://github.com/npcagomoc-del/libre-trading-journal)** · **[Privacy](#privacy-and-your-data)**
 
-**What this is not:** Not financial advice. Not a signal service. Every screenshot below is the
-synthetic demo seed, not anyone's real trades.
+Screenshots use synthetic accounts and trades in the actual application. No personal journal data or connected credentials are needed for this preview.
 
-![The dashboard: net P&L over a live equity curve, every session as one strip, measures against your goals, and the month beside your recent trades](docs/screenshot-dashboard.png)
+![Libre Trading Journal dashboard with synthetic trades, equity curve and performance measures](docs/screenshots/dashboard.jpg)
 
 ## Privacy and your data
 
@@ -114,8 +113,8 @@ Trade reconstruction, P&L, commissions, statistics, and other core trading calcu
 - **Dashboard**: your net P&L over a live equity curve (hover it for any day's running balance),
   every session in the period as a single strip you can scrub, measures against your own goals,
   the month beside your recent trades and open positions, and a tabbed breakdown by time of day,
-  day of week and strategy
-- **Trade View**: every trade with executions, playbook setup tags, MFE/MAE and exit efficiency, its AI analysis and an intraday chart with your fills on it
+  day of week and strategy, with original entry hours beside Philippine time and trading-session performance
+- **Trade View**: original and Philippine entry dates/times, trading sessions, executions, playbook setup tags, MFE/MAE and exit efficiency, plus optional AI analysis and intraday charts
 - **Reports**: breakdowns by day of week, time of day, hold time, setup, grade, symbol, side, emotion,
   plus a Sources & Tags tab that scores where your ideas come from. One switch flips the whole page
   between bars and full numeric tables, and rows under ten trades are marked thin so a one-trade
@@ -125,48 +124,38 @@ Trade reconstruction, P&L, commissions, statistics, and other core trading calcu
   trade marked where you entered it, plus an AI coaching report graded on process rather than P&L.
   Each trade's grade carries the reason it was given
 - **Brain**: a chat that answers questions against your full trading history
-- **Settings**: AI provider selection, journal backup/restore, MT5 market data, and the name library. Strategies, sources and tags in one place, with rename, merge and
+- **Settings**: AI connection, backup/restore guides, MT5 setup steps and a recorded walkthrough, and the name library. Strategies, sources and tags in one place, with rename, merge and
   delete. Merging rewrites every trade that used the old name and remembers it, so the next diary
   analysis that produces the duplicate saves it under the name you kept
-- **Import**: Thinkorswim account statement CSV and Interactive Brokers (IBKR) Activity Statement CSV, with a broker dropdown (auto-detect by default). Any other broker imports through a generic CSV template, one row per fill
+- **Import**: Thinkorswim and Interactive Brokers fill imports, Exness / MT5 fully closed positions, and a generic CSV template for other brokers. Choose the matching format before importing.
 
 ## Screenshots
 
-**Trade View.** Every trade with its executions, MFE/MAE and exit efficiency, the realized R, and the
-setup you tagged. Click any row to open the full trade.
+These captures come from the running Libre Trading Journal app with synthetic data. Click an image for its full size.
 
-![Trade View: the trade log with setups, excursion and R columns](docs/screenshot-trade-view.png)
+**Trade View.** Review the original entry timestamp, Philippine entry date/time and combined trading session alongside each trade's results.
 
-**Trade Details.** The executions on one trade, the planned and realized R, the stop and target you
-wrote before entry, and an intraday chart with your fills marked on it. Charts open on the trade
-day's session; the legend entries switch layers on and off.
+![Trade View showing synthetic trades with original and Philippine entry times and sessions](docs/screenshots/trade-view.jpg)
 
-![Trade Details: executions, R-multiple, stop and target, and an intraday chart with fills](docs/screenshot-trade-detail.png)
+**Entry time.** Dashboard Patterns pairs original entry hours with Philippine half-hour windows. The sample includes a record with an unknown source clock, which is excluded from these hour totals. Reports Timing also provides this breakdown.
 
-**Day Review.** The session as one picture: running P&L from the open to the close with every trade
-marked where you entered it. The day's measures sit under it, each set against your all-time figure:
-win rate, profit factor, average win, average per trade against your expectancy, exit efficiency,
-and how much was given back from the session high. Underneath, an AI coaching report graded on process rather than P&L,
-which reads your trades and your diary together and is willing to tell you a profitable day was
-badly run.
+![Dashboard Patterns showing original entry hours beside Philippine half-hours](docs/screenshots/patterns.jpg)
 
-![Day Review: the session drawn as running P&L with each trade marked, day measures, and an AI coaching report](docs/screenshot-day-review.png)
+**Trading sessions.** Compare trade counts, win rate and average P&L across sessions and overlaps. The Unclassified row retains the sample record with an unknown clock.
 
-**Reports.** Equity curve, drawdown against the running peak, and breakdowns by setup, timing,
-execution, symbol, source, tag and psychology.
+![Dashboard Patterns showing session and overlap performance, with an Unclassified row](docs/screenshots/sessions.jpg)
 
-![Reports: equity curve, drawdown from peak, and monthly performance](docs/screenshot-reports.png)
+**MT5 settings.** Follow the setup steps, open the recorded walkthrough, and match the journal account, connection method and historical clocks. The sample form has an empty access-key field.
 
-**Settings.** The vocabulary the journal uses. Rename a strategy, merge two that mean the same thing,
-or delete one and reassign its trades.
+![MT5 Settings showing setup instructions and a sample connection form with no access key](docs/screenshots/settings.jpg)
 
-![Settings: the strategy, source and tag library with rename, merge and delete](docs/screenshot-settings.png)
+See the [user guide](docs/USER-GUIDE.md#review-philippine-time-and-trading-sessions) for clock behavior and session definitions. Date filters still use the original journal closing date; Philippine entry time can fall on a different day.
 
 ## Watch the walkthrough
 
 [![Watch: I built my own AI trading journal and stopped paying monthly](docs/video-thumbnail.png)](https://www.youtube.com/watch?v=LTR4HOfS_hc)
 
-Simon's walkthrough covers the original app, installation and customization prompts. Libre Trading Journal's AI provider and backup controls are covered in the guides above.
+Simon's video above covers the original Trading-Journal-AI app, installation and customization prompts. For the current interface, use the [Libre Trading Journal user guide](docs/USER-GUIDE.md). The MT5 setup recording is available inside **Settings → Market data · MT5 → Watch MT5 walkthrough**.
 
 ## Quick start
 
@@ -250,7 +239,7 @@ To check what changed, see the [changelog](docs/CHANGELOG.md) and [Libre Trading
 
 ## Importing from a broker that is not listed
 
-Thinkorswim and Interactive Brokers have dedicated importers. For anything else, use the generic
+Thinkorswim, Interactive Brokers and Exness have dedicated importers. For anything else, use the generic
 template: one row per fill, which the journal groups into round-trip trades exactly like a broker
 import. On the Import page, open **Broker not listed?** to download it.
 
@@ -284,7 +273,7 @@ detection and P&L are shared.
 
 ## Environment variables
 
-The AI coach uses the provider selected in **Settings → AI provider**. **ChatGPT sign-in** retains the existing plan OAuth flow: continue with ChatGPT, allow plan usage if offered, choose an available model, then test. The **OpenAI API key**, **Claude API key**, and **OpenRouter API key** choices instead use the user's own API account and model. An OpenRouter key belongs in OpenRouter, not in the direct Claude field. API use has separate billing. A saved key is configured, not verified, until a test response completes. Brain, diary, daily/weekly reviews, and insights all share this selection. See [setup and error recovery](docs/AI-PROVIDERS.md).
+The AI coach uses the provider selected in **Settings → AI connection**. **ChatGPT sign-in** retains the existing plan OAuth flow: continue with ChatGPT, allow plan usage if offered, choose an available model, then test. The **OpenAI API key**, **Claude API key**, and **OpenRouter API key** choices instead use the user's own API account and model. An OpenRouter key belongs in OpenRouter, not in the direct Claude field. API use has separate billing. A saved key is configured, not verified, until a test response completes. Brain, diary, daily/weekly reviews, and insights all share this selection. See [setup and error recovery](docs/AI-PROVIDERS.md).
 
 To prevent extra spending, leave **Allow apps to use credits after reaching your usage limit** disabled in [ChatGPT Usage settings](https://chatgpt.com/settings/usage). This app never falls back to API-key billing. If plan usage is unavailable or exhausted, coaching shows an error.
 
@@ -344,11 +333,11 @@ Existing databases receive a transactional instrument-type migration, with a `.b
 
 Open the installed MetaTrader 5 desktop terminal and sign into your Exness, FTMO or FundedNext account there. In **More → Settings → Market data · MT5**, choose the journal account and matching price provider, then **Connect & test MT5**. Two connection methods are available:
 
-- **MT5 MCP · built-in server:** In MT5, enable **Tools → Options → MCP → Enable internal server**. Enter its local address (usually `http://127.0.0.1:22346/mcp`) and access key in the journal's password field. The key is encrypted using Windows DPAPI under `%LOCALAPPDATA%\TradingJournalAI\mt5-mcp`, outside the OneDrive project; the journal database stores only an opaque credential reference. Reconnecting can reuse the saved key when the address is unchanged. The client restricts requests to account information, market-watch symbol information, chart history and time information, and accepts only localhost endpoints.
+- **MT5 MCP · built-in server:** In MT5, enable **Tools → Options → MCP → Enable internal server**. Enter its local address (usually `http://127.0.0.1:22346/mcp`) and access key in the journal's password field. The key is encrypted using Windows DPAPI under `%LOCALAPPDATA%\TradingJournalAI\mt5-mcp`, outside the app folder; the journal database stores only an opaque credential reference. Reconnecting can reuse the saved key when the address is unchanged. The client restricts requests to account information, market-watch symbol information, chart history and time information, and accepts only localhost endpoints.
 - **MT5 Python · desktop terminal:** Choose the installed `terminal64.exe`. This method uses the official MetaTrader5 Python package and the terminal's existing sign-in; it needs no journal API key or trading password.
 
 The connector reads candles and tick volume; it does not place orders. It saves the connection and account identity per journal account and verifies that identity whenever it fetches prices. If you switch accounts in MT5, reconnect the journal deliberately or restore the saved account in MT5. Disconnecting removes the connection and its encrypted MCP credential, leaving trades intact.
 
 Choose the clock used by the trade timestamps. Exness imports always use UTC+0. FTMO history uses UTC+2 or UTC+3 depending on the trade date; set the applicable offset when reviewing it. MCP additionally requires the **MT5 server clock for these dates** because its native candle timestamps use the broker clock. FundedNext uses UTC+3 in daylight time and UTC+2 in standard time; set the applicable historical offset when reviewing dates in another season. The connector converts candles to UTC, and the chart displays the chosen trade clock, including the actual execution date for overnight trades. FundedNext and FTMO candles are labelled as reference prices when reviewing Exness trades. Exact and unique broker suffixes are resolved; ambiguous symbols require the full Market Watch name.
 
-Keep the terminal connected. Historical coverage depends on MT5 history, trading hours and the terminal's **Max. bars in chart** setting. Open the relevant chart in MT5 to download missing history. Forex tick volume is labelled explicitly; the stock-session VWAP is omitted for MT5 data. TradingView login and chart widgets are not needed for this feed.
+The Settings page includes numbered setup steps and **Watch MT5 walkthrough**, with playback controls and optional captions. Keep the terminal open and connected; minimizing it is fine. Historical coverage depends on MT5 history, trading hours and the terminal's **Max. bars in chart** setting. Open the relevant chart in MT5 to download missing history. Forex tick volume is labelled explicitly; the stock-session VWAP is omitted for MT5 data. TradingView login and chart widgets are not needed for this feed.

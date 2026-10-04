@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Search, ChevronUp, ChevronDown } from 'lucide-react';
 import { tradesApi } from '../api';
+import { useSourceClock, SourceClockControl } from './TradingTime';
 import TradeRow from './TradeRow';
 import { PageHeader, KpiStrip, KpiCell, MoneyValue } from './ui';
 
@@ -12,10 +13,14 @@ const fmtDay = (d) => {
   return `${MONTHS_SHORT[Number(m) - 1]} ${Number(day)}, ${y}`;
 };
 
-function getOpenTime(trade) {
-  const execs = trade.executions || [];
-  if (!execs.length) return '';
-  return [...execs].sort((a, b) => (a.time || '').localeCompare(b.time || ''))[0].time || '';
+export function getRecordedEntry(trade) {
+  const action = (trade.side || 'LONG').toUpperCase() === 'SHORT' ? 'SOLD' : 'BOT';
+  return [...(trade.executions || [])].filter(e => e.action === action && e.time)
+    .sort((a, b) => `${a.date || trade.date}|${a.time}`.localeCompare(`${b.date || trade.date}|${b.time}`))[0];
+}
+function entryKey(trade) {
+  const entry = getRecordedEntry(trade);
+  return entry ? `${entry.date || trade.date}|${entry.time}` : '';
 }
 
 function SortIcon({ col, sortCol, sortDir }) {
@@ -26,6 +31,7 @@ function SortIcon({ col, sortCol, sortDir }) {
 }
 
 export default function Trades({ accountId, initialDateFrom = '', initialDateTo = '', onOpenDetail }) {
+  const [sourceClock, setSourceClock] = useSourceClock();
   const [trades, setTrades] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -55,7 +61,7 @@ export default function Trades({ accountId, initialDateFrom = '', initialDateTo 
     setLoading(true);
     setError(null);
     try {
-      const params = {};
+      const params = { source_timezone: sourceClock };
       if (accountId != null) params.account_id = accountId;
       if (ticker) params.ticker = ticker;
       if (instrType) params.instrument_type = instrType;
@@ -70,7 +76,7 @@ export default function Trades({ accountId, initialDateFrom = '', initialDateTo 
     } finally {
       if (run === loadRun.current) setLoading(false);
     }
-  }, [accountId, ticker, instrType, dateFrom, dateTo]);
+  }, [accountId, ticker, instrType, dateFrom, dateTo, sourceClock]);
 
   useEffect(() => { load(); setPage(1); }, [load]);
 
@@ -88,9 +94,11 @@ export default function Trades({ accountId, initialDateFrom = '', initialDateTo 
     let av, bv;
     switch (sortCol) {
       case 'datetime':
-        av = (a.date || '') + '|' + getOpenTime(a);
-        bv = (b.date || '') + '|' + getOpenTime(b);
+        av = entryKey(a);
+        bv = entryKey(b);
         break;
+      case 'philippine':
+        av = a.entry_ph_time?.utc || ''; bv = b.entry_ph_time?.utc || ''; break;
       case 'ticker': av = a.ticker || ''; bv = b.ticker || ''; break;
       case 'side': av = a.side || ''; bv = b.side || ''; break;
       case 'type': av = a.instrument_type || ''; bv = b.instrument_type || ''; break;
@@ -138,6 +146,7 @@ export default function Trades({ accountId, initialDateFrom = '', initialDateTo 
         <KpiCell label="Win rate" value={<span className="num">{winRate}%</span>} foot={<><span className="num">{winners}</span> winners</>} />
       </KpiStrip>
 
+      <SourceClockControl value={sourceClock} onChange={setSourceClock} originalClocks={trades.map(trade => trade.entry_ph_time?.original_clock)} />
       {/* Filter bar */}
       <div role="search" aria-label="Filter trades" style={{ display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap', alignItems: 'flex-end' }}>
         <div>
@@ -192,10 +201,12 @@ export default function Trades({ accountId, initialDateFrom = '', initialDateTo 
 
       <section className="card panel-flush" aria-label="Trades">
         <div className="table-container">
-          <table style={{ minWidth: 980 }}>
+          <table style={{ minWidth: 1240 }}>
             <thead>
               <tr>
-                {sortTh('datetime', 'Date / Time')}
+                {sortTh('datetime', 'Recorded entry (source)')}
+                {sortTh('philippine', 'Philippine entry (PHT)')}
+                <th>Trading session</th>
                 {sortTh('ticker', 'Ticker')}
                 {sortTh('type', 'Type')}
                 {sortTh('side', 'Side')}
@@ -210,14 +221,14 @@ export default function Trades({ accountId, initialDateFrom = '', initialDateTo 
               {loading ? (
                 [...Array(5)].map((_, i) => (
                   <tr key={i}>
-                    {[...Array(9)].map((_, j) => (
+                    {[...Array(11)].map((_, j) => (
                       <td key={j}><div className="skeleton" style={{ height: 16, width: '80%' }} /></td>
                     ))}
                   </tr>
                 ))
               ) : paginated.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="empty">
+                  <td colSpan={11} className="empty">
                     No trades found. Import a CSV to get started.
                   </td>
                 </tr>
@@ -226,7 +237,8 @@ export default function Trades({ accountId, initialDateFrom = '', initialDateTo 
                   <TradeRow
                     key={trade.id}
                     trade={trade}
-                    openTime={getOpenTime(trade)}
+                    openTime={getRecordedEntry(trade)?.time || ''}
+                    recordedEntryDate={getRecordedEntry(trade) ? (getRecordedEntry(trade).date || trade.date) : null}
                     onOpenDetail={(t) => onOpenDetail(t, paginated)}
                     customSetups={customSetups}
                     onCustomSetupsChanged={reloadCustomSetups}

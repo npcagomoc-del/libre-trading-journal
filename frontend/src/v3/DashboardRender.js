@@ -2,6 +2,7 @@
    state is passed in from Dashboard.js, so no behaviour lives here. */
 import { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
+import { ConversionNotice, OriginalEntry, uniqueOriginalClocks, SessionHours } from '../components/TradingTime';
 import { calendarApi } from '../api';
 import {
   Measures, BarRow, Tabs, Seg, EquityCurve, SessionStrip, MonthGrid,
@@ -60,19 +61,21 @@ function MonthPanel({ accountId, onDayClick, latestDate }) {
 }
 
 /* ── the three breakdowns, sharing one space ───────────────────────────── */
-function Patterns({ edge, byStrategy, onViewAll }) {
+export function Patterns({ edge, byStrategy, onViewAll, sourceClockControl }) {
   const [tab, setTab] = useState('tod');
   const [view, setView] = useState('bars');
   const tabs = [
-    { id: 'tod', label: 'Time of day' },
+    { id: 'tod', label: 'Entry time' },
+    { id: 'sessions', label: 'Trading sessions' },
     { id: 'dow', label: 'Day of week' },
     { id: 'str', label: 'Strategy' },
   ];
 
   const rows = (() => {
     if (tab === 'tod') {
-      return (edge?.time_of_day || []).map((r) => ({ name: r.bucket, n: r.trade_count, v: r.net_pnl }));
+      return (edge?.philippine_time_of_day || []).filter(r => r.trade_count > 0).map((r) => ({ name: r.bucket, original: r, n: r.trade_count, v: r.net_pnl, wr: r.win_rate, avg: r.avg_pnl }));
     }
+    if (tab === 'sessions') return (edge?.trading_sessions || []).map(r => ({ name: r.session, n: r.trade_count, v: r.net_pnl, wr: r.win_rate, avg: r.avg_pnl }));
     if (tab === 'dow') {
       return (edge?.day_of_week || []).map((r) => ({ name: r.day, n: r.trade_count, v: r.net_pnl }));
     }
@@ -81,6 +84,7 @@ function Patterns({ edge, byStrategy, onViewAll }) {
     }));
   })();
 
+  const mixedClocks = uniqueOriginalClocks((edge?.philippine_time_of_day || []).flatMap(row => row.original_clocks || [])).length > 1;
   const peak = Math.max(1, ...rows.map((r) => Math.abs(r.v || 0)));
 
   return (
@@ -89,7 +93,8 @@ function Patterns({ edge, byStrategy, onViewAll }) {
         <div>
           <h2 className="v3-h">Patterns</h2>
           <p className="v3-h-sub">
-            {tab === 'tod' && 'Net P&L by the hour you entered'}
+            {tab === 'tod' && 'Net P&L by entry time · 30-minute windows'}
+            {tab === 'sessions' && 'Compare performance by market session at entry'}
             {tab === 'dow' && 'Net P&L by weekday'}
             {tab === 'str' && 'Net P&L by the strategy on the trade'}
           </p>
@@ -104,6 +109,8 @@ function Patterns({ edge, byStrategy, onViewAll }) {
           <button type="button" className="btn btn-secondary btn-sm" onClick={onViewAll}>Full report</button>
         </div>
       </div>
+      {(tab === 'tod' || tab === 'sessions') && <>{sourceClockControl}<ConversionNotice conversion={edge?.time_conversion} /></>}
+      {tab === 'sessions' && <SessionHours />}
       <Tabs tabs={tabs} active={tab} onChange={setTab} label="Breakdown" />
       {!rows.length ? (
         <div className="v3-empty">Nothing recorded in this range.</div>
@@ -112,10 +119,11 @@ function Patterns({ edge, byStrategy, onViewAll }) {
           <table className="v3-t">
             <thead>
               <tr>
-                <th>{tab === 'tod' ? 'Hour' : tab === 'dow' ? 'Day' : 'Strategy'}</th>
+                {tab === 'tod' && <th>Original entry</th>}
+                <th>{tab === 'tod' ? 'Philippine time (PHT)' : tab === 'sessions' ? 'Trading session' : tab === 'dow' ? 'Day' : 'Strategy'}</th>
                 <th className="r">Trades</th>
-                {tab === 'str' && <th className="r">Win rate</th>}
-                {view === 'table' && <th className="r">Avg / trade</th>}
+                {tab !== 'dow' && <th className="r">Win rate</th>}
+                {(view === 'table' || tab === 'sessions') && <th className="r">Avg / trade</th>}
                 {view === 'table' && tab === 'str' && <th className="r v3-hide-s">Avg R</th>}
                 {view === 'bars' && <th>Net</th>}
                 <th className="r">Total</th>
@@ -124,14 +132,15 @@ function Patterns({ edge, byStrategy, onViewAll }) {
             <tbody>
               {rows.map((r, i) => (
                 <tr key={i}>
+                  {tab === 'tod' && <td className="v3-mono text-muted"><OriginalEntry row={r.original} showClock={mixedClocks} /></td>}
                   <td className="v3-tick">{r.name}</td>
                   <td className="r v3-mono">{r.n ?? ''}</td>
-                  {tab === 'str' && (
+                  {tab !== 'dow' && (
                     <td className="r v3-mono">{r.wr != null ? `${Number(r.wr).toFixed(0)}%` : '—'}</td>
                   )}
-                  {view === 'table' && (
+                  {(view === 'table' || tab === 'sessions') && (
                     <td className={`r v3-mono ${r.n ? tone((r.v || 0) / r.n) : 'v3-flat'}`}>
-                      {r.n ? money((r.v || 0) / r.n) : '—'}
+                      {r.n ? money(r.avg ?? ((r.v || 0) / r.n)) : '—'}
                     </td>
                   )}
                   {view === 'table' && tab === 'str' && (
@@ -294,7 +303,9 @@ export default function DashboardRender(p) {
   const k = kpis || {};
   const days = k.daily_pnl || [];
   const net = k.total_net_pnl || 0;
-  const cents = Math.abs(net % 1).toFixed(2).slice(1);
+  const [dollars, centDigits] = Math.abs(net).toFixed(2).split('.');
+  const wholeNet = `${net < 0 ? '−$' : '+$'}${Number(dollars).toLocaleString('en-US')}`;
+  const cents = `.${centDigits}`;
 
   const awin = Math.abs(k.avg_win || 0);
   const aloss = Math.abs(k.avg_loss || 0);
@@ -380,7 +391,7 @@ export default function DashboardRender(p) {
           <div>
             <p className="v3-acct">{accountLabel}{span ? ` · ${span}` : ''}</p>
             <h1 className={`v3-money ${tone(net)}`}>
-              {money(net)}<span className="cents">{cents}</span>
+              {wholeNet}<span className="cents">{cents}</span>
             </h1>
             <p className="v3-money-sub">
               <b>{(k.trading_days || 0).toLocaleString()} sessions</b>, {(k.total_trades || 0).toLocaleString()} trades.
@@ -491,7 +502,7 @@ export default function DashboardRender(p) {
 
       {/* 4. the three breakdowns, sharing one space */}
       <section className="v3-band">
-        <Patterns edge={edgeReport} byStrategy={k.by_strategy} onViewAll={onViewAllTrades} />
+        <Patterns sourceClockControl={p.sourceClockControl} edge={edgeReport} byStrategy={k.by_strategy} onViewAll={onViewAllTrades} />
       </section>
     </div>
   );

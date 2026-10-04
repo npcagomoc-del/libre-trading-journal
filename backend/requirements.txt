@@ -8,5 +8,6 @@ Pillow==12.3.0
 pillow-heif==1.8.0
 PyJWT[crypto]>=2.10,<3
 filelock>=3.16,<4
+tzdata>=2026.1
 pywin32>=308; sys_platform == 'win32'
 MetaTrader5>=5.0,<6; sys_platform == 'win32'

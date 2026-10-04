@@ -4,7 +4,7 @@ Choose ChatGPT sign-in, OpenAI API, Claude API or OpenRouter in Libre Trading Jo
 
 ## Set up your connection
 
-Open **More → Settings → AI provider** (the panel is titled **Your AI, your choice**).
+Open **More → Settings → AI connection → AI provider**.
 
 | Choice | Credential and billing |
 |---|---|
@@ -38,7 +38,7 @@ Leave the key field blank when changing only the model: it keeps the saved key. 
 
 ## Images and model capabilities
 
-Typed diaries and Brain use text. Screenshots require a model with confirmed image support. The settings panel shows image capability; refresh the model list when a manually entered OpenRouter model is unknown. A successful text test does not prove image analysis works.
+Typed diaries and Brain use text. Screenshots require a model with confirmed image support. Settings still validates model capabilities and reports unsupported image models; refresh the model list when a manually entered OpenRouter model is unknown. A successful text test does not prove image analysis works.
 
 If screenshot analysis is unsupported, choose a compatible model or upload typed notes. The diary upload can save the entry before AI analysis fails; inspect Diary before reuploading to avoid duplicates. Stored review content is cached and is not automatically regenerated merely because you switch provider. Brain messages remain session state and disappear after reload.
 
