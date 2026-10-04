@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { kpisApi, tradesApi, edgeReportApi, goalsApi } from '../api';
+import { useSourceClock, SourceClockControl } from './TradingTime';
 import DateRangePicker from './DateRangePicker';
 import DashboardRender from '../v3/DashboardRender';
 import {
@@ -63,6 +64,7 @@ function GoalsPanel({ draft, onChange, onSave, onCancel, accountLabel, saving, e
 // ── Dashboard ──────────────────────────────────────────────────────────────────
 
 export default function Dashboard({ accountId, accounts = [], selectedAccountId, onDayClick, onOpenDetail, onViewAllTrades }) {
+  const [sourceClock, setSourceClock] = useSourceClock();
   const [kpis, setKpis] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -93,7 +95,8 @@ export default function Dashboard({ accountId, accounts = [], selectedAccountId,
 
   useEffect(() => {
     const run = ++kpiRun.current;
-    const current = () => run === kpiRun.current;
+    let active = true;
+    const current = () => active && run === kpiRun.current;
     setLoading(true);
     setError(null);
     const params = {};
@@ -105,10 +108,11 @@ export default function Dashboard({ accountId, accounts = [], selectedAccountId,
       .then(r => { if (current()) { setKpis(r.data); setLoading(false); } })
       .catch(e => { if (current()) { setError(e.message); setLoading(false); } });
 
-    edgeReportApi.get(params)
+    edgeReportApi.get({ ...params, source_timezone: sourceClock })
       .then(r => { if (current()) setEdgeReport(r.data); })
       .catch(() => { if (current()) setEdgeReport(null); });
-  }, [accountId, dateFrom, dateTo, reloadKey]);
+    return () => { active = false; };
+  }, [accountId, dateFrom, dateTo, reloadKey, sourceClock]);
 
   useEffect(() => {
     const params = {};
@@ -243,6 +247,7 @@ export default function Dashboard({ accountId, accounts = [], selectedAccountId,
           openPositions={openPositions}
           recentTrades={recentTrades}
           edgeReport={edgeReport}
+          sourceClockControl={<SourceClockControl value={sourceClock} onChange={setSourceClock} originalClocks={edgeReport?.time_conversion?.original_clocks} />}
           showGoals={showGoals}
           onToggleGoals={() => { setGoalsDraft({ ...goals }); setShowGoals(v => !v); }}
           goalsNode={showGoals ? (

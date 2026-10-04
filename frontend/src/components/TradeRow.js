@@ -18,7 +18,7 @@ function ConfidenceDot({ level }) {
 }
 
 
-export default function TradeRow({ trade, openTime, onOpenDetail, customSetups = [], onCustomSetupsChanged }) {
+export default function TradeRow({ trade, openTime, recordedEntryDate, onOpenDetail, customSetups = [], onCustomSetupsChanged }) {
   const pnl = trade.net_pnl ?? 0;
   const pnlTone = pnl > 0 ? 'pos' : pnl < 0 ? 'neg' : '';
 
@@ -226,9 +226,13 @@ export default function TradeRow({ trade, openTime, onOpenDetail, customSetups =
         }}
       >
         <td>
-          <div className="num">{trade.date}</div>
+          <div className="num">{recordedEntryDate || 'Entry unavailable'}</div>
           {openTime && <div className="num text-muted" style={{ fontSize: 13 }}>{openTime.slice(0, 5)}</div>}
         </td>
+        <td>
+          {trade.entry_ph_time ? <><div className="num">{trade.entry_ph_time.date}</div><div className="num text-muted">{trade.entry_ph_time.time.slice(0, 5)} PHT ({Number(trade.entry_ph_time.time.slice(0, 2)) % 12 || 12}:{trade.entry_ph_time.time.slice(3, 5)} {Number(trade.entry_ph_time.time.slice(0, 2)) >= 12 ? 'PM' : 'AM'})</div></> : <span className="text-muted">{trade.entry_time_status === 'unknown_clock' ? 'Set source clock' : 'Entry unavailable'}</span>}
+        </td>
+        <td style={{ maxWidth: 190 }}><span className="text-muted">{trade.entry_ph_time?.session || 'Unclassified'}</span></td>
         <td>
           <span style={{ fontWeight: 600 }}>{trade.ticker}</span>
         </td>

@@ -130,7 +130,7 @@ Import result counts are trade groups, while skipped items can be described as d
 
 ## AI provider errors
 
-Open **More → Settings → Your AI, your choice**. Confirm the selected provider/model: every AI feature uses this selection. API options require that service's own key; put an OpenRouter Claude key under OpenRouter rather than direct Claude. Saving config does not verify access; **Test connection** makes a small request and can incur usage charges.
+Open **More → Settings → AI connection**. Confirm the selected provider/model: every AI feature uses this selection. API options require that service's own key; put an OpenRouter Claude key under OpenRouter rather than direct Claude. Saving config does not verify access; **Test connection** makes a small request and can incur usage charges.
 
 | Symptom | Recovery |
 |---|---|

@@ -19,6 +19,7 @@ import httpx
 
 from database import init_db, get_db, row_to_dict
 from instruments import ASSET_TYPES, positive_number, sizing
+from trade_clock import SOURCE_CLOCKS, entry_clock, philippine_performance
 from csv_parser import parse_broker_csv, FUTURES_MULTIPLIERS
 from ai_analysis import (
     analyze_diary_entry,
@@ -582,7 +583,10 @@ def list_trades(
     open_only: bool = Query(False),
     limit: int | None = Query(None),
     conn: sqlite3.Connection = Depends(get_connection),
+    source_timezone: str = 'auto',
 ):
+    if source_timezone not in SOURCE_CLOCKS:
+        raise HTTPException(status_code=422, detail='Unsupported source clock')
     sql = """
         SELECT t.*, ta.strategy, ta.stop_loss, ta.r_multiple, ta.match_confidence, ta.emotional_state,
                ta.entry_reason, ta.exit_reason, ta.ai_feedback, ta.mistakes, ta.notes as analysis_notes
@@ -622,6 +626,7 @@ def list_trades(
             d['executions'] = []
         if open_only and not _is_open_position(d):
             continue
+        d['entry_ph_time'], d['entry_time_status'] = entry_clock(d, source_timezone)
         result.append(d)
 
     if limit is not None and open_only:
@@ -1868,9 +1873,12 @@ def get_edge_report(
     date_from: str | None = Query(None),
     date_to: str | None = Query(None),
     conn: sqlite3.Connection = Depends(get_connection),
+    source_timezone: str = 'auto',
 ):
+    if source_timezone not in SOURCE_CLOCKS:
+        raise HTTPException(status_code=422, detail='Unsupported source clock')
     sql = """
-        SELECT t.trade_group, t.ticker, t.side, t.net_pnl, t.date, t.executions,
+        SELECT t.trade_group, t.ticker, t.side, t.net_pnl, t.date, t.executions, t.source,
                ta.r_multiple, ta.emotional_state, ta.mistakes
         FROM trades t
         LEFT JOIN trade_analysis ta ON t.trade_group = ta.trade_group
@@ -2081,6 +2089,7 @@ def get_edge_report(
         er_expectancy = 0.0
 
     return {
+        **philippine_performance(trades, source_timezone),
         "time_of_day": time_of_day,
         "day_of_week": day_of_week,
         "r_multiple_dist": r_multiple_dist,

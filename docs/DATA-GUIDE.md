@@ -13,7 +13,7 @@ Under normal `launch.bat` startup:
 | `backend/uploads/` | Uploaded diary images/text, linked by filename in diary records. Back up with the database. |
 | `backend/.env` | Optional credentials/configuration; private, not version-controlled. |
 | `*.before-multi-asset.bak` beside database | First pre-migration snapshot if the old asset constraint is migrated. It is not a continuing backup schedule. |
-| `%LOCALAPPDATA%\TradingJournalAI\chatgpt\` | ChatGPT connection store/lock. Windows DPAPI-protected `connection.bin`; outside this OneDrive checkout. |
+| `%LOCALAPPDATA%\TradingJournalAI\chatgpt\` | ChatGPT connection store/lock. Windows DPAPI-protected `connection.bin`; outside the application directory. |
 | `%LOCALAPPDATA%\TradingJournalAI\ai-providers\` | DPAPI-protected API keys, model configuration and active AI provider; separate from journal backups. |
 | `%LOCALAPPDATA%\TradingJournalAI\backups\` | Automatic pre-restore recovery ZIPs. Private journal data; download from Settings or preserve locally. |
 | `%LOCALAPPDATA%\TradingJournalAI\mt5-mcp\` | Windows-encrypted MCP credentials; database stores an opaque reference plus non-secret feed config. |
@@ -79,6 +79,16 @@ Use the [position template](../frontend/public/templates/exness_positions_templa
 Comma CSVs use dot decimals and may quote thousands separators. Semicolon/tab formats also accept decimal commas. Symbol suffixes are retained. Conflicting duplicate ticket rows, including partial-close rows sharing a ticket, are refused. Position IDs use `exness_<journal-account-id>_<ticket>`, keeping overlapping tickets in different accounts separate.
 
 Identical reimports skip. Corrected tickets update stored broker values and executions while retaining notes/tags; broker stop/target updates preserve independently edited values according to the existing-value check in `main.py`. Reports use the closing date. Exness metadata specifies UTC+0 for chart placement; the parser preserves timestamps without changing their clock.
+
+## Philippine entry clock and session analytics
+
+`trade_clock.py` derives the earliest entry instant from execution date/time and the side-specific entry action (BOT for LONG, SOLD for SHORT). `/api/trades` adds `entry_ph_time` and `entry_time_status`; `/api/edge-report` adds `philippine_time_of_day`, `trading_sessions` and conversion counts. These are read-only derived fields; there is no migration, reimport or timestamp rewrite.
+
+Automatic conversion uses explicit timestamp offsets, then execution `timestamp_timezone`, then UTC for Exness source/broker records. Unknown clocks remain unclassified. A supported `source_timezone` query override interprets naive records in the selected clock; explicit offsets remain authoritative. Historical city clocks use Python zoneinfo and the tzdata dependency, including on Windows. Ambiguous/nonexistent DST timestamps are refused rather than guessed.
+
+Philippine performance has 48 half-hour buckets across 24 hours. Each bucket includes `original_buckets`, the distinct source half-hour labels from the same actual entry executions, and `original_entries` pairing each half-hour with its source/clock. `original_clocks` and `time_conversion.original_clocks` identify clocks for row/global captions; Exness automatic records are labeled UTC+0, while explicit overrides display their effective offset. Exness documents its platform server time as GMT+0 in its [General Business Terms](https://www.exness.com/cdn/media/exnesssc/exness_sc_general_business_terms.pdf). Source city clocks also include the dated UTC offset; the UI displays these next to the Philippine bucket. `entry_ph_time` also retains derived `original_date` and `original_time`. This avoids fabricating a single offset when mixed clocks or historical DST yield different original hours in one Philippine bucket. Session membership uses local weekday windows: Sydney 08–17, Tokyo 09–18, London 08–17, New York 08–17. Combined active sessions form disjoint buckets; outside windows and unclassified records have their own buckets. Session trade counts and net P&L reconcile to all selected records; Philippine hour totals include converted entries only. Win rate is positive net-P&L records divided by all records in the bucket (breakevens included); average P&L is total divided by count. These forex conventions do not identify broker-specific instrument opening hours.
+
+Filtering remains on the original closing date and account; local Philippine entry dates may cross midnight. The browser's source-clock preference affects these analytics across Trade View, Dashboard and Reports and does not change chart clock settings or persisted trades.
 
 ## Money calculations
 

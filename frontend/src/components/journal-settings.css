@@ -58,3 +58,17 @@
   .provider-selection > label { min-width: 0; flex-basis: 100%; }
   .backup-preview { padding: 14px; }
 }
+
+.settings-guide { margin: 20px 0 24px; padding: 18px 20px; border-left: 2px solid var(--divider-strong); background: var(--surface-inset); }
+.settings-guide h3 { margin: 0 0 8px; font-size: 14px; }
+.settings-steps { padding-left: 22px; margin: 12px 0 20px; font-size: 13px; line-height: 1.7; color: var(--text-secondary); }
+.settings-steps li { padding-left: 5px; margin-bottom: 10px; }
+.settings-steps li::marker { color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+.settings-steps strong, .settings-steps b { color: var(--text-primary); font-weight: 600; }
+.settings-details { margin: 12px 0 18px; font-size: 13px; }
+.settings-details summary { cursor: pointer; color: var(--text-secondary); }
+.settings-details .connection-copy { max-width: 850px; }
+
+.mt5-walkthrough { margin-bottom: 0; }
+.mt5-walkthrough h4 { margin: 16px 0 6px; font-size: 14px; }
+.mt5-walkthrough video { display: block; width: 100%; max-width: 960px; aspect-ratio: 16 / 9; background: #080d11; border: 1px solid var(--divider); border-radius: 4px; }

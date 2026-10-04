@@ -2,6 +2,33 @@
 
 Changes below are recorded from Git history, source review and test results. The earlier local-development entries describe the work before publication.
 
+## 2026-10-04 — repository preview and publication checks
+
+- Updated the README with the current features and screenshots captured from the actual application. Six wholly fictional trades in a disposable journal demonstrate source/PHT times, midnight rollover and session performance; screenshots do not use personal journal values.
+- Retained original MT5 setup footage with opaque privacy masks and removed the later private trading-history section from the public excerpt. No generated instruction cards are used. The original recording remains private and unchanged.
+- Corrected the dashboard headline's dollar/cents formatting: $41.60 no longer appears as $42.60. Stored P&L calculations are unchanged; regression cases include negative cents, sub-dollar losses and rounding carry.
+- Fresh local checks: 183 backend tests and 9 frontend suites / 58 tests passed; production build passed. Publishing uses the separate Libre repository checkout, a source allowlist, redacted secret scans and required hosted CI; runtime journals, uploads, credentials and raw recordings are excluded. The public video passed 2,080 sensitive-region frame checks, full decoding and visual transition review.
+
+## 2026-10-04 — Settings guides, dashboard calendar and private MT5 walkthrough (implementation checkpoint)
+
+- Fixed the dashboard date picker clipping at the hero boundary. Its portal stays within the viewport, scrolls when needed, and preserves presets, outside-click and Escape dismissal.
+- Simplified AI settings labels and removed redundant capability badges. Added numbered MT5 and backup/restore guides, explicitly stating MT5 must stay open and connected while charts load. Existing connection checks and restore safeguards remain.
+- Embedded a 24-second real MT5 setup excerpt with controls, optional captions, a redacted actual screenshot preview and no autoplay. The 446,968-byte public file masks MCP keys, account identity, browser download history and transition previews. Audio and the later private trade-history section are excluded. The original recording is untouched.
+- Astra assisted with Settings design and implementation. Validation: 8 frontend suites / 54 tests passed; after the original-footage revision, 5 focused MT5 tests passed and the CI production build compiled successfully. Synthetic localhost browser checks verified calendar viewport bounds, Settings guides and actual video playback. Privacy review covered one frame per second throughout, the key region across the MT5 segment and complete video decoding. No live MT5 connection or journal restore was performed. Public updates use the repository's required pull-request and CI workflow.
+
+## 2026-10-04 — simpler time controls and paired entry hours (implementation checkpoint)
+
+- Put original entry half-hour labels beside Philippine time in Dashboard Patterns and Reports Timing. Labels come from the actual entries, including rollover, mixed source clocks and historical DST.
+- Added an Exness UTC+0 source caption beside Philippine time UTC+8, with per-entry labels for mixed source clocks. Reduced visible clock settings to that compact caption and an optional adjustment disclosure. Session-hour explanations are collapsed. Automatic conversion remains the default; manual overrides remain visible and resettable.
+- Preserved the previous clock/session feature, original records and existing working-tree changes. Validation: 183 backend tests, 7 frontend suites / 50 tests, and CI production build passed. Synthetic browser checks covered paired hours, captions, the optional adjustment and override reset. Included in the repository update after local validation.
+
+## 2026-10-04 — Philippine entry time and trading sessions (implementation checkpoint)
+
+- Added derived Philippine entry date/time and session columns, preserving source timestamps and closing-date filters.
+- Added full-day Philippine half-hour performance and disjoint market-session/overlap performance on Dashboard Patterns and Reports Timing, with trades, win rate, average and net P&L.
+- Added a shared browser source-clock selector, explicit unclassified records, historical DST handling and the tzdata backend dependency. Original import/money calculations and chart clocks are unchanged.
+- Backend: 180 tests passed, including 22 new clock/analytics/API regressions on synthetic data. Frontend: 7 suites / 45 tests passed; CI production build compiled successfully. Synthetic desktop browser checks covered rows, Dashboard, Reports and shared source-clock conversion; screenshots and details are recorded in PROJECT-STATUS. This records the initial feature-validation checkpoint; the later repository update includes these changes.
+
 ## 2026-10-04 — product name and documentation wording
 
 - Replaced shortened product names with Libre Trading Journal throughout the public documentation.

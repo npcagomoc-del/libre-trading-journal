@@ -2,6 +2,8 @@
 
 Use **More → Settings → Backup & restore**. The built-in controls operate on the entire journal, including all accounts. A downloaded backup contains private trading data; keep it somewhere you trust. There is no automatic scheduled backup in this version.
 
+Settings includes separate numbered quick guides beside **Download your journal** and **Restore a backup**. Follow those controls in order; checking a ZIP only previews it, while **Replace journal & restore** replaces every account.
+
 ## Download a backup
 
 1. Finish any ongoing imports or AI analysis.

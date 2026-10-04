@@ -1,4 +1,5 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useLayoutEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { ChevronLeft, ChevronRight, ChevronDown, Calendar, X } from 'lucide-react';
 
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June',
@@ -117,6 +118,24 @@ export default function DateRangePicker({ dateFrom, dateTo, onChange }) {
   const [viewMonth, setViewMonth] = useState(today.getMonth() === 0 ? 11 : today.getMonth() - 1);
   const [viewYearR, setViewYearR] = useState(today.getMonth() === 0 ? today.getFullYear() - 1 : today.getFullYear());
   const ref = useRef();
+  const panelRef = useRef();
+  const [panelPosition, setPanelPosition] = useState({ top: 0, left: 12, width: 760, maxHeight: 600 });
+
+  useLayoutEffect(() => {
+    if (!open) return undefined;
+    const place = () => {
+      const rect = ref.current.getBoundingClientRect();
+      const width = Math.min(760, window.innerWidth - 24);
+      const below = window.innerHeight - rect.bottom - 18;
+      const top = below >= 220 ? rect.bottom + 6 : Math.max(12, rect.top - 500);
+      setPanelPosition({ top, left: Math.max(12, Math.min(rect.right - width, window.innerWidth - width - 12)),
+        width, maxHeight: window.innerHeight - top - 12 });
+    };
+    place();
+    window.addEventListener('resize', place);
+    window.addEventListener('scroll', place, true);
+    return () => { window.removeEventListener('resize', place); window.removeEventListener('scroll', place, true); };
+  }, [open]);
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
@@ -133,7 +152,7 @@ export default function DateRangePicker({ dateFrom, dateTo, onChange }) {
 
   useEffect(() => {
     function handleClick(e) {
-      if (ref.current && !ref.current.contains(e.target)) {
+      if (ref.current && !ref.current.contains(e.target) && !panelRef.current?.contains(e.target)) {
         setOpen(false);
         setSelecting(null);
         setHover(null);
@@ -219,13 +238,13 @@ export default function DateRangePicker({ dateFrom, dateTo, onChange }) {
       </div>
 
       {/* Dropdown panel */}
-      {open && (
-        <div role="dialog" aria-label="Choose a date range" style={{
-          position: 'absolute', top: 'calc(100% + 6px)', right: 0, zIndex: 500,
+      {open && createPortal(
+        <div ref={panelRef} role="dialog" aria-label="Choose a date range" style={{
+          ...panelPosition, position: 'fixed', zIndex: 500,
           background: 'var(--surface-panel)', border: '1px solid var(--divider)',
           borderRadius: 'var(--radius-lg)', boxShadow: 'var(--shadow-dropdown)',
-          display: 'flex', flexWrap: 'wrap', gap: 0, overflow: 'hidden',
-          width: 'max-content', maxWidth: 'calc(100vw - 32px)',
+          display: 'flex', flexWrap: 'wrap', gap: 0, overflowY: 'auto',
+          maxWidth: 'calc(100vw - 24px)',
         }}>
           {/* Calendars */}
           <div style={{ padding: '16px 20px', flex: 1 }}>
@@ -298,7 +317,7 @@ export default function DateRangePicker({ dateFrom, dateTo, onChange }) {
               );
             })}
           </div>
-        </div>
+        </div>, document.body
       )}
     </div>
   );

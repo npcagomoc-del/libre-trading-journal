@@ -73,8 +73,8 @@ export default function ChatGPTConnection({ compact = false, onStatus }) {
         {ready ? `Using your ChatGPT plan${status.model ? ` · ${status.model}` : ''}` : 'Connect your ChatGPT account to use Brain and AI coaching.'}
       </div>
       {!compact && <p style={{ fontSize: 14, lineHeight: 1.6 }}>
-        Uses your existing eligible ChatGPT plan. Coaching requests send the relevant trade history, notes, and any diary images to OpenAI.
-        There is no API-key billing fallback. In ChatGPT Usage settings, leave <strong>Allow apps to use credits after reaching your usage limit</strong> disabled to avoid spending purchased credits.
+        Coaching uses your eligible ChatGPT plan and sends relevant trades, notes, and diary images to OpenAI.
+        To avoid purchased-credit charges, open <b>Manage ChatGPT usage</b> and leave <strong>Allow apps to use credits after reaching your usage limit</strong> disabled.
       </p>}
       {status?.connected && !status.plan_usage_enabled && <p role="status">Sign-in is connected, but permission to use your ChatGPT plan was not granted. Reconnect to enable it.</p>}
       {!compact && ready && <label style={{ display: 'block', margin: '12px 0', maxWidth: 480 }}>
